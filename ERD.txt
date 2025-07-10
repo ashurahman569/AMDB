@@ -1,0 +1,173 @@
+CREATE TABLE "Movie" (
+  "movie_id" int PRIMARY KEY,
+  "title" varchar NOT NULL,
+  "release_date" date,
+  "runtime" int,
+  "about" text,
+  "plot" text,
+  "mpaa_rating" varchar,
+  "budget" decimal,
+  "box_office" decimal,
+  "poster_url" varchar,
+  "trailer_url" varchar
+);
+
+CREATE TABLE "Person" (
+  "person_id" int PRIMARY KEY,
+  "first_name" varchar,
+  "last_name" varchar,
+  "birth_date" date,
+  "death_date" date,
+  "biography" text,
+  "birthplace" varchar,
+  "photo_url" varchar
+);
+
+-- Changed to SERIAL PRIMARY KEY for auto-increment starting from 1
+CREATE TABLE "Actor" (
+  "actor_id" SERIAL PRIMARY KEY,
+  "person_id" int UNIQUE NOT NULL
+);
+
+-- Changed to SERIAL PRIMARY KEY for auto-increment starting from 1
+CREATE TABLE "Director" (
+  "director_id" SERIAL PRIMARY KEY,
+  "person_id" int UNIQUE NOT NULL
+);
+
+-- Changed to SERIAL PRIMARY KEY for auto-increment starting from 1
+CREATE TABLE "Writer" (
+  "writer_id" SERIAL PRIMARY KEY,  
+  "person_id" int UNIQUE NOT NULL
+);
+
+CREATE TABLE "Role" (
+  "role_id" SERIAL PRIMARY KEY,
+  "movie_id" int NOT NULL,
+  "actor_id" int NOT NULL,
+  "character_name" varchar
+);
+
+CREATE TABLE "Movie_Director" (
+  "movie_id" int NOT NULL,
+  "director_id" int NOT NULL,
+  PRIMARY KEY ("movie_id", "director_id")
+);
+
+CREATE TABLE "Genre" (
+  "genre_id" int PRIMARY KEY,
+  "name" varchar NOT NULL
+);
+
+CREATE TABLE "Movie_Genre" (
+  "movie_id" int NOT NULL,
+  "genre_id" int NOT NULL,
+  PRIMARY KEY ("movie_id", "genre_id")
+);
+
+CREATE TABLE "Movie_Writer" (
+  "movie_id" int NOT NULL,
+  "writer_id" int NOT NULL,
+  PRIMARY KEY ("movie_id", "writer_id")
+);
+
+CREATE TABLE "Award" (
+  "award_id" int PRIMARY KEY,
+  "name" varchar NOT NULL,
+  "year" int
+);
+
+CREATE TABLE "Award_Movie" (
+  "award_movie_id" SERIAL PRIMARY KEY,
+  "award_id" int NOT NULL,
+  "movie_id" int NOT NULL,
+  "category" varchar
+);
+
+CREATE TABLE "Award_Actor" (
+  "award_actor_id" SERIAL PRIMARY KEY,
+  "award_id" int NOT NULL,
+  "actor_id" int NOT NULL,
+  "movie_id" int NOT NULL,
+  "category" varchar
+);
+
+CREATE TABLE "Award_Director" (
+  "award_director_id" SERIAL PRIMARY KEY,
+  "award_id" int NOT NULL,
+  "director_id" int NOT NULL,
+  "movie_id" int NOT NULL,
+  "category" varchar
+);
+
+CREATE TABLE "User" (
+  "user_id" SERIAL PRIMARY KEY,
+  "username" varchar UNIQUE NOT NULL,
+  "email" varchar UNIQUE NOT NULL,
+  "password_hash" varchar NOT NULL,
+  "join_date" date DEFAULT CURRENT_DATE,
+  "user_type" varchar DEFAULT 'regular',
+  "is_active" boolean DEFAULT true
+);
+
+CREATE TABLE "Review" (
+  "review_id" SERIAL PRIMARY KEY,
+  "movie_id" int NOT NULL,
+  "user_id" int NOT NULL,
+  "rating" int CHECK (rating >= 1 AND rating <= 10) NOT NULL,
+  "review_text" text,
+  "created_at" timestamp DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "Watchlist" (
+  "watch_id" SERIAL PRIMARY KEY,
+  "user_id" int NOT NULL,
+  "movie_id" int NOT NULL,
+  "added_date" timestamp DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE("user_id", "movie_id")
+);
+
+CREATE TABLE "Favourites" (  
+  "fav_id" SERIAL PRIMARY KEY,  
+  "user_id" int NOT NULL,  
+  "movie_id" int NOT NULL,  
+  "added_date" timestamp DEFAULT CURRENT_TIMESTAMP,  
+  UNIQUE("user_id", "movie_id")  
+);  
+  
+-- Add foreign key constraints  
+ALTER TABLE "Favourites" ADD FOREIGN KEY ("user_id") REFERENCES "User" ("user_id");  
+ALTER TABLE "Favourites" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id"); 
+
+ALTER TABLE "Watchlist" ADD FOREIGN KEY ("user_id") REFERENCES "User" ("user_id");
+ALTER TABLE "Watchlist" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id");
+
+ALTER TABLE "Actor" ADD FOREIGN KEY ("person_id") REFERENCES "Person" ("person_id");
+ALTER TABLE "Director" ADD FOREIGN KEY ("person_id") REFERENCES "Person" ("person_id");
+ALTER TABLE "Writer" ADD FOREIGN KEY ("person_id") REFERENCES "Person" ("person_id");
+
+ALTER TABLE "Role" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id");
+ALTER TABLE "Role" ADD FOREIGN KEY ("actor_id") REFERENCES "Actor" ("actor_id");
+
+ALTER TABLE "Movie_Director" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id");
+ALTER TABLE "Movie_Director" ADD FOREIGN KEY ("director_id") REFERENCES "Director" ("director_id");
+
+ALTER TABLE "Movie_Genre" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id");
+ALTER TABLE "Movie_Genre" ADD FOREIGN KEY ("genre_id") REFERENCES "Genre" ("genre_id");
+
+ALTER TABLE "Movie_Writer" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id");
+ALTER TABLE "Movie_Writer" ADD FOREIGN KEY ("writer_id") REFERENCES "Writer" ("writer_id");
+
+ALTER TABLE "Award_Movie" ADD FOREIGN KEY ("award_id") REFERENCES "Award" ("award_id");
+ALTER TABLE "Award_Movie" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id");
+
+ALTER TABLE "Award_Actor" ADD FOREIGN KEY ("award_id") REFERENCES "Award" ("award_id");
+ALTER TABLE "Award_Actor" ADD FOREIGN KEY ("actor_id") REFERENCES "Actor" ("actor_id");
+ALTER TABLE "Award_Actor" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id");
+
+ALTER TABLE "Award_Director" ADD FOREIGN KEY ("award_id") REFERENCES "Award" ("award_id");
+ALTER TABLE "Award_Director" ADD FOREIGN KEY ("director_id") REFERENCES "Director" ("director_id");
+ALTER TABLE "Award_Director" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id");
+
+ALTER TABLE "Review" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id");
+ALTER TABLE "Review" ADD FOREIGN KEY ("user_id") REFERENCES "User" ("user_id");
