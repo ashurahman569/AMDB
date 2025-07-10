@@ -6,6 +6,7 @@ const reviewRoutes = require('./routes/reviews');
 const peopleRoutes = require('./routes/people');
 const genreRoutes = require('./routes/genres');
 const userRoutes = require('./routes/user');
+const awardRoutes = require('./routes/awards'); 
 const pool = require('./db');
 require('dotenv').config();
 
@@ -21,6 +22,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/genres', genreRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/awards', awardRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

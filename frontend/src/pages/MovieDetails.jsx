@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 const BASE_URL = 'http://localhost:5000/api';
 import PersonCard from '../components/cards/PersonCard';
-import { Users, Star, Plus, Heart, X } from 'lucide-react';
+import { Users, Star, Plus, Heart, X, Award } from 'lucide-react';
 import ReviewCard from '../components/cards/ReviewCard';
 
 export default function MovieDetailsPage({ user }) {
@@ -13,6 +13,8 @@ export default function MovieDetailsPage({ user }) {
   const [error, setError] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [awards, setAwards] = useState([]);
+  const [awardsLoading, setAwardsLoading] = useState(true);
   const [isAddingToWatchlist, setIsAddingToWatchlist] = useState(false);
   const [isAddingToFav, setIsAddingToFav] = useState(false);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
@@ -118,6 +120,25 @@ export default function MovieDetailsPage({ user }) {
     }
     if (id) {
       fetchReviews();
+    }
+  }, [id]);
+
+  // Add this useEffect to fetch awards
+  useEffect(() => {
+    async function fetchAwards() {
+      try {
+        const res = await axios.get(`${BASE_URL}/awards/movie/${id}`);
+        console.log("🏆 Awards data:", res.data);
+        setAwards(res.data.data);
+      } catch (err) {
+        console.error('Failed to fetch awards:', err);
+        setAwards([]); // Set empty array on error
+      } finally {
+        setAwardsLoading(false);
+      }
+    }
+    if (id) {
+      fetchAwards();
     }
   }, [id]);
 
@@ -650,6 +671,30 @@ export default function MovieDetailsPage({ user }) {
               </>
             )}
           </div>
+        </div>
+      </div>
+      
+      {/* Awards Section */}
+      <div className="mt-8">
+        <h2 className="text-2xl font-semibold mb-4 text-white flex items-center gap-2">
+          <Award className="text-yellow-400" size={24} />
+          Awards & Recognition
+        </h2>
+        <div className="bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm border border-gray-700">
+          {awardsLoading ? (
+            <div className="text-center text-gray-400 py-4">Loading awards...</div>
+          ) : awards.length > 0 ? (
+            <ul className="space-y-2 text-white">
+              {awards.map((award, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <span className="text-yellow-400 mt-1">•</span>
+                  <span>{award.award}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-400 text-center py-4">No award information available for this movie</p>
+          )}
         </div>
       </div>
       
