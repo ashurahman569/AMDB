@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { User, LogOut, LogIn, UserPlus, X } from 'lucide-react';
+import { User, LogOut, LogIn, UserPlus, X, Eye, EyeOff } from 'lucide-react';
 
 const Profile = ({ user, onLogin, onRegister, onLogout }) => {
     const [showModal, setShowModal] = useState(false);
     const [isLoginMode, setIsLoginMode] = useState(true);
+    const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -29,6 +30,7 @@ const Profile = ({ user, onLogin, onRegister, onLogout }) => {
             }
             setShowModal(false);
             setFormData({ email: '', password: '', username: '' });
+            setShowPassword(false);
         } catch (error) {
             console.error('Auth error:', error);
             alert(error.message);
@@ -43,10 +45,15 @@ const Profile = ({ user, onLogin, onRegister, onLogout }) => {
     const toggleMode = () => {
         setIsLoginMode(!isLoginMode);
         setFormData({ email: '', password: '', username: '' });
+        setShowPassword(false);
+    };
+
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
     };
 
     return (
-        <>
+        <div>
             {/* Profile Button */}
             <div className="flex items-center">
                 <button
@@ -68,7 +75,12 @@ const Profile = ({ user, onLogin, onRegister, onLogout }) => {
                     <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md mx-4 relative">
                         {/* Close Button */}
                         <button
-                            onClick={() => { setShowModal(false); setIsLoginMode(true);setFormData({ email: '', password: '', username: '' }); }}
+                            onClick={() => { 
+                                setShowModal(false); 
+                                setIsLoginMode(true);
+                                setFormData({ email: '', password: '', username: '' }); 
+                                setShowPassword(false);
+                            }}
                             className="absolute top-4 right-4 text-gray-400 hover:text-white"
                         >
                             <X size={20} />
@@ -134,14 +146,27 @@ const Profile = ({ user, onLogin, onRegister, onLogout }) => {
                                         <label className="block text-gray-300 text-sm font-medium mb-2">
                                             Password
                                         </label>
-                                        <input
-                                            type="password"
-                                            name="password"
-                                            value={formData.password}
-                                            onChange={handleInputChange}
-                                            className="w-full px-3 py-2 bg-gray-800 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-yellow-400"
-                                            required
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                name="password"
+                                                value={formData.password}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 pr-10 bg-gray-800 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-yellow-400"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={togglePasswordVisibility}
+                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                                            >
+                                                {showPassword ? (
+                                                    <EyeOff size={18} />
+                                                ) : (
+                                                    <Eye size={18} />
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <button
@@ -178,7 +203,7 @@ const Profile = ({ user, onLogin, onRegister, onLogout }) => {
                     </div>
                 </div>
             )}
-        </>
+        </div>
     );
 };
 

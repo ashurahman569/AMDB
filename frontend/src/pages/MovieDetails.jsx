@@ -21,7 +21,7 @@ export default function MovieDetailsPage({ user }) {
   const [isInFavorites, setIsInFavorites] = useState(false);
   const [isRemovingFromWatchlist, setIsRemovingFromWatchlist] = useState(false);
   const [isRemovingFromFav, setIsRemovingFromFav] = useState(false);
-  
+
   // Rating modal states
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [userRating, setUserRating] = useState(0);
@@ -48,29 +48,29 @@ export default function MovieDetailsPage({ user }) {
   useEffect(() => {
     async function checkUserLists() {
       if (!user) return;
-      
+
       try {
         const token = localStorage.getItem('token');
-        
+
         // Check watchlist
         const watchlistResponse = await fetch(`${BASE_URL}/user/checkinwatchlist?movie_id=${id}&user_id=${user.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (watchlistResponse.ok) {
           const watchlistData = await watchlistResponse.json();
           setIsInWatchlist(watchlistData.inWatchlist);
         }
-        
+
         // Check favorites
         const favoritesResponse = await fetch(`${BASE_URL}/user/checkinfav?movie_id=${id}&user_id=${user.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (favoritesResponse.ok) {
           const favoritesData = await favoritesResponse.json();
           setIsInFavorites(favoritesData.inFavourites);
@@ -79,7 +79,7 @@ export default function MovieDetailsPage({ user }) {
         console.error('Error checking user lists:', error);
       }
     }
-    
+
     if (user && id) {
       checkUserLists();
     }
@@ -89,7 +89,7 @@ export default function MovieDetailsPage({ user }) {
   useEffect(() => {
     async function checkUserReview() {
       if (!user || !id) return;
-      
+
       try {
         const response = await fetch(`${BASE_URL}/reviews/isreview?movieId=${id}&userId=${user.id}`);
         if (response.ok) {
@@ -100,7 +100,7 @@ export default function MovieDetailsPage({ user }) {
         console.error('Error checking user review:', error);
       }
     }
-    
+
     checkUserReview();
   }, [user, id]);
 
@@ -142,21 +142,65 @@ export default function MovieDetailsPage({ user }) {
     }
   }, [id]);
 
-  // Handle rating modal open
+  // Handle rating modal open - updated to handle both rate and review buttons
   const handleOpenRatingModal = () => {
     if (!user) {
       alert('Please sign in to rate this movie');
       return;
     }
-    
+
     if (hasUserReviewed) {
       alert('You have already reviewed this movie');
       return;
     }
-    
+
     setShowRatingModal(true);
   };
 
+  const handleReviewUpdate = (updatedReview) => {
+    setReviews(prevReviews =>
+      prevReviews.map(review =>
+        review.review_id === updatedReview.review_id
+          ? { ...review, ...updatedReview }
+          : review
+      )
+    );
+
+    // Optionally refresh movie data to get updated average rating
+    const fetchUpdatedMovie = async () => {
+      try {
+        const movieRes = await axios.get(`${BASE_URL}/movies/${id}`);
+        setMovie(movieRes.data.data);
+      } catch (error) {
+        console.error('Error fetching updated movie data:', error);
+      }
+    };
+    fetchUpdatedMovie();
+  };
+
+  // Handler for when a review is deleted
+  const handleReviewDelete = (reviewId) => {
+    setReviews(prevReviews =>
+      prevReviews.filter(review => review.review_id !== reviewId)
+    );
+
+    // Check if the deleted review belongs to the current user
+    const deletedReview = reviews.find(review => review.review_id === reviewId);
+    if (deletedReview && user && deletedReview.user_id === user.id) {
+      setHasUserReviewed(false);
+    }
+
+    // Optionally refresh movie data to get updated average rating
+    const fetchUpdatedMovie = async () => {
+      try {
+        const movieRes = await axios.get(`${BASE_URL}/movies/${id}`);
+        setMovie(movieRes.data.data);
+      } catch (error) {
+        console.error('Error fetching updated movie data:', error);
+      }
+    };
+    fetchUpdatedMovie();
+  };
   // Handle rating modal close
   const handleCloseRatingModal = () => {
     setShowRatingModal(false);
@@ -192,11 +236,11 @@ export default function MovieDetailsPage({ user }) {
         alert('Rating submitted successfully!');
         setHasUserReviewed(true);
         handleCloseRatingModal();
-        
+
         // Refresh reviews
         const res = await axios.get(`${BASE_URL}/reviews/${id}`);
         setReviews(res.data);
-        
+
         // Refresh movie data to get updated average rating
         const movieRes = await axios.get(`${BASE_URL}/movies/${id}`);
         setMovie(movieRes.data.data);
@@ -215,18 +259,17 @@ export default function MovieDetailsPage({ user }) {
   // Star rating component
   const StarRating = ({ rating, onRatingChange, interactive = true }) => {
     const [hoverRating, setHoverRating] = useState(0);
-    
+
     return (
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
           <button
             key={star}
             type="button"
-            className={`text-2xl transition-colors ${
-              star <= (hoverRating || rating) 
-                ? 'text-yellow-400' 
-                : 'text-gray-400'
-            } ${interactive ? 'hover:text-yellow-400' : ''}`}
+            className={`text-2xl transition-colors ${star <= (hoverRating || rating)
+              ? 'text-yellow-400'
+              : 'text-gray-400'
+              } ${interactive ? 'hover:text-yellow-400' : ''}`}
             onClick={() => interactive && onRatingChange(star)}
             onMouseEnter={() => interactive && setHoverRating(star)}
             onMouseLeave={() => interactive && setHoverRating(0)}
@@ -248,9 +291,9 @@ export default function MovieDetailsPage({ user }) {
     if (!personArray || personArray.length === 0) return 'N/A';
     return personArray.map(person => `${person.first_name} ${person.last_name}`).join(', ');
   };
-  
+
   const year = movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A';
-  
+
   // Function to add movie to watchlist
   const handleAddToWatchlist = async () => {
     if (!user) {
@@ -412,7 +455,7 @@ export default function MovieDetailsPage({ user }) {
       setIsRemovingFromFav(false);
     }
   };
-  
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -434,75 +477,70 @@ export default function MovieDetailsPage({ user }) {
           <p className="text-white"><strong>Written by:</strong> {formatPersonNames(movie.writers)}</p>
           <p className="text-white"><strong>Box Office:</strong> ${movie.box_office?.toLocaleString()}</p>
           <p className="text-white"><strong>Average Rating:</strong> {parseFloat(movie.avg_rating).toFixed(1)} / 10 ({movie.review_count} reviews)</p>
-          
+
           {/* User-specific actions */}
           {user && (
             <div className="flex gap-4 mt-6">
-              <button 
+              <button
                 onClick={handleOpenRatingModal}
                 disabled={hasUserReviewed}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                  hasUserReviewed 
-                    ? 'bg-green-600 text-gray-300 cursor-not-allowed' 
-                    : 'bg-yellow-400 hover:bg-yellow-500 text-gray-900'
-                }`}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${hasUserReviewed
+                  ? 'bg-green-600 text-gray-300 cursor-not-allowed'
+                  : 'bg-yellow-400 hover:bg-yellow-500 text-gray-900'
+                  }`}
               >
                 <Star size={18} />
                 {hasUserReviewed ? 'Already Rated' : 'Rate Movie'}
               </button>
-              
+
               {/* Watchlist Button */}
               {isInWatchlist ? (
-                <button 
+                <button
                   onClick={handleRemoveFromWatchlist}
                   disabled={isRemovingFromWatchlist}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                    isRemovingFromWatchlist 
-                      ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
-                      : 'bg-red-600 hover:bg-red-700 text-white'
-                  }`}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${isRemovingFromWatchlist
+                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700 text-white'
+                    }`}
                 >
                   <Plus size={18} className="rotate-45" />
                   {isRemovingFromWatchlist ? 'Removing...' : 'Remove from Watchlist'}
                 </button>
               ) : (
-                <button 
+                <button
                   onClick={handleAddToWatchlist}
                   disabled={isAddingToWatchlist}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                    isAddingToWatchlist 
-                      ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
-                      : 'bg-green-600 hover:bg-green-700 text-white'
-                  }`}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${isAddingToWatchlist
+                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
                 >
                   <Plus size={18} />
                   {isAddingToWatchlist ? 'Adding...' : 'Add to Watchlist'}
                 </button>
               )}
-              
+
               {/* Favorites Button */}
               {isInFavorites ? (
-                <button 
+                <button
                   onClick={handleRemoveFromFavorites}
                   disabled={isRemovingFromFav}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                    isRemovingFromFav 
-                      ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
-                      : 'bg-gray-600 hover:bg-gray-700 text-white'
-                  }`}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${isRemovingFromFav
+                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                    }`}
                 >
                   <Heart size={18} fill="currentColor" />
                   {isRemovingFromFav ? 'Removing...' : 'Remove from Favorites'}
                 </button>
               ) : (
-                <button 
+                <button
                   onClick={handleAddToFavorites}
                   disabled={isAddingToFav}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                    isAddingToFav 
-                      ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
-                      : 'bg-pink-600 hover:bg-pink-700 text-white'
-                  }`}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${isAddingToFav
+                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                    : 'bg-pink-600 hover:bg-pink-700 text-white'
+                    }`}
                 >
                   <Heart size={18} />
                   {isAddingToFav ? 'Adding...' : 'Add to Favorites'}
@@ -510,7 +548,7 @@ export default function MovieDetailsPage({ user }) {
               )}
             </div>
           )}
-          
+
           {!user && (
             <div className="mt-6 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
               <p className="text-gray-300">
@@ -534,18 +572,18 @@ export default function MovieDetailsPage({ user }) {
                 <X size={24} />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-white mb-2">Your Rating:</label>
-                <StarRating 
-                  rating={userRating} 
+                <StarRating
+                  rating={userRating}
                   onRatingChange={setUserRating}
                   interactive={true}
                 />
                 <p className="text-sm text-gray-400 mt-1">Click on a star to rate (1-10)</p>
               </div>
-              
+
               <div>
                 <label className="block text-white mb-2">Write a Review (Optional):</label>
                 <textarea
@@ -556,7 +594,7 @@ export default function MovieDetailsPage({ user }) {
                   rows={4}
                 />
               </div>
-              
+
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleCloseRatingModal}
@@ -567,11 +605,10 @@ export default function MovieDetailsPage({ user }) {
                 <button
                   onClick={handleSubmitRating}
                   disabled={isSubmittingRating || userRating === 0}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    isSubmittingRating || userRating === 0
-                      ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                      : 'bg-yellow-400 hover:bg-yellow-500 text-gray-900'
-                  }`}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${isSubmittingRating || userRating === 0
+                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                    : 'bg-yellow-400 hover:bg-yellow-500 text-gray-900'
+                    }`}
                 >
                   {isSubmittingRating ? 'Submitting...' : 'Submit Rating'}
                 </button>
@@ -673,7 +710,7 @@ export default function MovieDetailsPage({ user }) {
           </div>
         </div>
       </div>
-      
+
       {/* Awards Section */}
       <div className="mt-8">
         <h2 className="text-2xl font-semibold mb-4 text-white flex items-center gap-2">
@@ -697,14 +734,22 @@ export default function MovieDetailsPage({ user }) {
           )}
         </div>
       </div>
-      
+
       {/* Reviews Section */}
       <div className="mt-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-semibold text-white">Reviews</h2>
           {user && (
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
-              Write Review
+            <button 
+              onClick={handleOpenRatingModal}
+              disabled={hasUserReviewed}
+              className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                hasUserReviewed
+                  ? 'bg-green-600 text-gray-300 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {hasUserReviewed ? 'Already Reviewed' : 'Add Your Review'}
             </button>
           )}
         </div>
@@ -716,16 +761,24 @@ export default function MovieDetailsPage({ user }) {
             <>
               {reviews.slice(0, 3).map(review => (
                 <div key={review.review_id} className="mb-4">
-                  <ReviewCard review={review} user={user} />
-                  {/* Show edit/delete options if this is the user's review */}
-                  {/* {user && review.user_id === user.user_id && (
-                    <div className="flex gap-2 mt-2">
-                      <button className="text-blue-400 hover:text-blue-300 text-sm">Edit</button>
-                      <button className="text-red-400 hover:text-red-300 text-sm">Delete</button>
-                    </div>
-                  )} */}
+                  <ReviewCard
+                    review={review}
+                    user={user}
+                    onReviewUpdate={handleReviewUpdate}
+                    onReviewDelete={handleReviewDelete}
+                  />
                 </div>
               ))}
+              {reviews.length > 3 && (
+                <div className="text-center mt-4 pt-4 border-t border-gray-600">
+                  <a 
+                    href={`/reviews/${movie.movie_id}`}
+                    className="text-blue-400 hover:text-blue-300 underline transition-colors"
+                  >
+                    See all reviews...
+                  </a>
+                </div>
+              )}
             </>
           ) : (
             <div className="text-center text-gray-400 py-8">

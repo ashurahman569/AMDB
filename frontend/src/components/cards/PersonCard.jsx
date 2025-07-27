@@ -1,10 +1,16 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users } from 'lucide-react';
 
 const PersonCard = ({ person, onClick }) => {
+  const navigate = useNavigate();
+  
   const handleClick = () => {
     if (onClick) {
       onClick(person.person_id);
+    } else {
+      // Default navigation to person details page
+      navigate(`/people/${person.person_id}`);
     }
   };
 

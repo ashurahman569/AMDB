@@ -7,6 +7,10 @@ import MovieDetails from './pages/MovieDetails';
 import Loading from './components/common/Loading';
 import Watchlist from './pages/Watchlist';
 import Favourites from './pages/Favourites';
+import PersonDetails from './pages/PersonDetails';
+import AdminPanel from './pages/AdminPanel';
+import Reviews from './pages/Reviews';
+import Users from './pages/Users';
 import './styles/index.css';
 const BASE_URL = 'http://localhost:5000/api';
 
@@ -95,10 +99,25 @@ const App = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    alert('You have logged out successfully.');
-    setUser(null);
+  const handleLogout = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      if (token) {
+        await fetch(`${BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      alert('You have logged out successfully.');
+      setUser(null);
+    }
   };
 
   if (loading) {
@@ -117,8 +136,12 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/search" element={<Search />} />
           <Route path="/movie/:id" element={<MovieDetails user={user} />} />
+          <Route path="/reviews/:movie_id" element={<Reviews user={user} />} />
           <Route path="/watchlist" element={<Watchlist user={user} />} />
           <Route path="/favourites" element={<Favourites user={user} />} />
+          <Route path="/people/:person_id" element={<PersonDetails user={user}/>} />
+          <Route path="/569adminpanel325" element={<AdminPanel user={user}/>} />
+          <Route path="/569adminpanel325/users" element={<Users user={user}/>} />
         </Routes>
       </div>
     </Router>

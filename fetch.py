@@ -87,7 +87,7 @@ def get_discover_movies(page=1):
         'sort_by': 'popularity.desc',
         'include_adult': 'false',
         'include_video': 'false',
-        'primary_release_date.gte': '1990-01-01',
+        'primary_release_date.gte': '1980-01-01',
         'primary_release_date.lte': '2025-12-31',
         'page': page
     }
@@ -193,7 +193,7 @@ def is_valid_movie(movie):
         # Check year range
         try:
             year = int(movie['release_date'][:4])
-            if not (1990 <= year <= 2025):
+            if not (1980 <= year <= 2025):
                 return False
         except (ValueError, TypeError, KeyError):
             return False
@@ -207,7 +207,7 @@ def is_valid_movie(movie):
         budget = safe_float(movie.get('budget', 0))
         revenue = safe_float(movie.get('revenue', 0))
         
-        if budget < 4_000_000 and revenue < 8_000_000:
+        if budget < 500_000 and revenue < 2_000_000:
             return False
             
         return True
@@ -231,7 +231,7 @@ def ensure_person_exists(cur, person_id, person_data):
             person_details = person_data
             
         name = person_details.get('name') or person_data.get('name')
-        if not name or not contains_only_valid_chars_person(name):
+        if not name:
             print(f"Invalid name for person {person_id}: {name}")
             return False
             
@@ -460,7 +460,7 @@ def insert_movie_genres(cur, movie_id, genres):
 
 def insert_roles(cur, movie_id, cast):
     """Insert actor roles for a movie."""
-    for person in cast[:10]:  # Limit to top 10 cast members
+    for person in cast[:25]:  # Limit to top 25 cast members
         person_id = person.get('id')
         if not person_id:
             continue
@@ -554,7 +554,7 @@ def main():
         
         print(f"Starting to fetch {total_pages} pages of movies...")
         
-        for page in range(47, total_pages + 1):
+        for page in range(65, total_pages + 1):
             print(f"\nProcessing page {page}/{total_pages}...")
             
             data = get_discover_movies(page)

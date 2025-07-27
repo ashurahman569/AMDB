@@ -1,0 +1,128 @@
+-- 1. Trigger function to cascade delete all movie dependencies
+CREATE OR REPLACE FUNCTION cascade_delete_movie() RETURNS TRIGGER AS $
+BEGIN
+    -- Delete all dependent records before movie deletion
+    DELETE FROM "Review" WHERE movie_id = OLD.movie_id;
+    DELETE FROM "Watchlist" WHERE movie_id = OLD.movie_id;
+    DELETE FROM "Favourites" WHERE movie_id = OLD.movie_id;
+    DELETE FROM "Role" WHERE movie_id = OLD.movie_id;
+    DELETE FROM "Movie_Director" WHERE movie_id = OLD.movie_id;
+    DELETE FROM "Movie_Genre" WHERE movie_id = OLD.movie_id;
+    DELETE FROM "Movie_Writer" WHERE movie_id = OLD.movie_id;
+    DELETE FROM "Award_Movie" WHERE movie_id = OLD.movie_id;
+    DELETE FROM "Award_Actor" WHERE movie_id = OLD.movie_id;
+    DELETE FROM "Award_Director" WHERE movie_id = OLD.movie_id;
+    
+    -- Allow the original DELETE to proceed
+    RETURN OLD;
+END;
+$ LANGUAGE plpgsql;
+
+-- Create the trigger
+CREATE TRIGGER movie_cascade_delete_trigger
+    BEFORE DELETE ON "Movie"
+    FOR EACH ROW
+    EXECUTE FUNCTION cascade_delete_movie();
+
+
+
+-- 2. Trigger to handle cascading deletion of Person record
+CREATE OR REPLACE FUNCTION delete_person_cascade()
+RETURNS TRIGGER AS $$
+DECLARE
+    actor_ids INT[];
+    director_ids INT[];
+    writer_ids INT[];
+BEGIN
+    -- Get all actor_ids for this person
+    SELECT ARRAY_AGG(actor_id) INTO actor_ids
+    FROM "Actor" 
+    WHERE person_id = OLD.person_id;
+    
+    -- Get all director_ids for this person
+    SELECT ARRAY_AGG(director_id) INTO director_ids
+    FROM "Director" 
+    WHERE person_id = OLD.person_id;
+    
+    -- Get all writer_ids for this person
+    SELECT ARRAY_AGG(writer_id) INTO writer_ids
+    FROM "Writer" 
+    WHERE person_id = OLD.person_id;
+    
+    -- Delete from Award_Actor for all actor_ids
+    IF actor_ids IS NOT NULL THEN
+        DELETE FROM "Award_Actor" 
+        WHERE actor_id = ANY(actor_ids);
+    END IF;
+    
+    -- Delete from Award_Director for all director_ids
+    IF director_ids IS NOT NULL THEN
+        DELETE FROM "Award_Director" 
+        WHERE director_id = ANY(director_ids);
+    END IF;
+    
+    -- Delete from Role for all actor_ids
+    IF actor_ids IS NOT NULL THEN
+        DELETE FROM "Role" 
+        WHERE actor_id = ANY(actor_ids);
+    END IF;
+    
+    -- Delete from Movie_Director for all director_ids
+    IF director_ids IS NOT NULL THEN
+        DELETE FROM "Movie_Director" 
+        WHERE director_id = ANY(director_ids);
+    END IF;
+    
+    -- Delete from Movie_Writer for all writer_ids
+    IF writer_ids IS NOT NULL THEN
+        DELETE FROM "Movie_Writer" 
+        WHERE writer_id = ANY(writer_ids);
+    END IF;
+    
+    -- Delete from Actor table
+    DELETE FROM "Actor" 
+    WHERE person_id = OLD.person_id;
+    
+    -- Delete from Director table
+    DELETE FROM "Director" 
+    WHERE person_id = OLD.person_id;
+    
+    -- Delete from Writer table
+    DELETE FROM "Writer" 
+    WHERE person_id = OLD.person_id;
+    
+    -- The Person record will be deleted by the original DELETE statement
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create the trigger
+CREATE TRIGGER trigger_delete_person_cascade
+    BEFORE DELETE ON "Person"
+    FOR EACH ROW
+    EXECUTE FUNCTION delete_person_cascade();
+
+
+
+
+-- 3. Create a trigger function to delete all reviews when a user is deleted
+CREATE OR REPLACE FUNCTION delete_user_reviews()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Delete all reviews associated with the deleted user
+    DELETE FROM "Review" WHERE user_id = OLD.user_id;
+    
+    -- Log the deletion (optional)
+    RAISE NOTICE 'Deleted all reviews for user_id: %', OLD.user_id;
+    
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create the trigger that fires BEFORE a user is deleted
+CREATE TRIGGER trigger_delete_user_reviews
+    BEFORE DELETE ON "User"
+    FOR EACH ROW
+    EXECUTE FUNCTION delete_user_reviews();
+
+

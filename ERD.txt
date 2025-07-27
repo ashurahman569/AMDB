@@ -107,7 +107,7 @@ CREATE TABLE "User" (
   "password_hash" varchar NOT NULL,
   "join_date" date DEFAULT CURRENT_DATE,
   "user_type" varchar DEFAULT 'regular',
-  "is_active" boolean DEFAULT true
+  "is_active" boolean DEFAULT false
 );
 
 CREATE TABLE "Review" (
@@ -147,15 +147,11 @@ CREATE TABLE "Banned" (
   "ban_reason" text,  
   "banner_id" int NOT NULL  -- ID of the moderator/admin who issued the ban  
 ); 
-
-ALTER TABLE "Banned" ADD FOREIGN KEY ("user_id") REFERENCES "User" ("user_id"); 
-ALTER TABLE "Banned" ADD FOREIGN KEY ("banner_id") REFERENCES "User" ("user_id");
   
 -- Add foreign key constraints  
-ALTER TABLE "Favourites" ADD FOREIGN KEY ("user_id") REFERENCES "User" ("user_id");  
+
 ALTER TABLE "Favourites" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id"); 
 
-ALTER TABLE "Watchlist" ADD FOREIGN KEY ("user_id") REFERENCES "User" ("user_id");
 ALTER TABLE "Watchlist" ADD FOREIGN KEY ("movie_id") REFERENCES "Movie" ("movie_id");
 
 ALTER TABLE "Actor" ADD FOREIGN KEY ("person_id") REFERENCES "Person" ("person_id");

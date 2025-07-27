@@ -38,9 +38,10 @@ router.post("/register", validInfo, async (req, res) => {
     return res.json({ 
       token: jwtToken,
       user: {
-        id: newUser.rows[0].user_id,        // Fixed: using newUser instead of user
-        username: newUser.rows[0].username, // Fixed: using newUser instead of user
-        email: newUser.rows[0].email        // Fixed: using newUser instead of user
+        id: newUser.rows[0].user_id,       
+        username: newUser.rows[0].username, 
+        email: newUser.rows[0].email,
+        user_type: newUser.rows[0].user_type        // Fixed: using newUser instead of user
       }
     });
   } catch (err) {
@@ -67,16 +68,29 @@ router.post("/login", validInfo, async (req, res) => {
     if (!validPassword) {
       return res.status(401).json({ message: "Invalid Credentials" });
     }
-    
+    await pool.query('UPDATE "User" SET "is_active" = true WHERE "user_id" = $1', [user.rows[0].user_id]);
     const jwtToken = jwtGenerator(user.rows[0].user_id);
     return res.json({ 
       token: jwtToken,
       user: {
         id: user.rows[0].user_id,
         username: user.rows[0].username,
-        email: user.rows[0].email
+        email: user.rows[0].email,
+        user_type: user.rows[0].user_type // Added user_type to the response
       }
     });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+//add another method here that handles logout
+router.post("/logout", authorize, async (req, res) => {
+  try {
+    // Set is_active to false for the user
+    await pool.query('UPDATE "User" SET "is_active" = false WHERE "user_id" = $1', [req.user.id]);
+    res.json({ message: "Logout successful" });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ message: "Server error" });
@@ -86,7 +100,7 @@ router.post("/login", validInfo, async (req, res) => {
 router.get("/verify", authorize, async (req, res) => {
   try {
     // Get user data from database using the user ID from the token
-    const user = await pool.query('SELECT "user_id", "username", "email" FROM "User" WHERE "user_id" = $1', [
+    const user = await pool.query('SELECT "user_id", "username", "email", "user_type" FROM "User" WHERE "user_id" = $1', [
       req.user.id
     ]);
 
@@ -97,7 +111,9 @@ router.get("/verify", authorize, async (req, res) => {
     res.json({
       id: user.rows[0].user_id,
       username: user.rows[0].username,
-      email: user.rows[0].email
+      email: user.rows[0].email,
+      user_type: user.rows[0].user_type
+
     });
   } catch (err) {
     console.error(err.message);

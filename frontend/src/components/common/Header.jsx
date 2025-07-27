@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bookmark, Heart, X } from 'lucide-react';
+import { Search, Bookmark, Heart, X, Shield } from 'lucide-react';
 import Profile from './Profile'; // Import the Profile component
 
 const Header = ({ user, onLogin, onRegister, onLogout }) => {
@@ -39,11 +39,20 @@ const Header = ({ user, onLogin, onRegister, onLogout }) => {
         }
     };
 
+    const handleAdminPanelClick = () => {
+        navigate('/569adminpanel325');
+    };
+
     const closeModal = () => {
         setShowLoginModal(false);
         setModalMessage('');
     };
 
+    // Check if user is admin
+    const isAdmin = user && user.user_type === 'admin';
+        // Debug logging
+
+    
     return (
         <>
             <header className="bg-gray-900 text-white p-4 shadow-lg sticky top-0 z-50">
@@ -98,6 +107,17 @@ const Header = ({ user, onLogin, onRegister, onLogout }) => {
                         onRegister={onRegister}
                         onLogout={onLogout}
                     />
+
+                    {/* Admin Panel Button - Only show for admin users */}
+                    {isAdmin && (
+                        <button
+                            onClick={handleAdminPanelClick}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-red-800 bg-red-700 transition-colors text-white border border-red-600"
+                        >
+                            <Shield size={18} />
+                            <span>Admin Panel</span>
+                        </button>
+                    )}
                 </div>
             </header>
 

@@ -7,6 +7,9 @@ const peopleRoutes = require('./routes/people');
 const genreRoutes = require('./routes/genres');
 const userRoutes = require('./routes/user');
 const awardRoutes = require('./routes/awards'); 
+const adminRoutes = require('./routes/admin');
+const validInfo = require('./middleware/validinfo');
+const authorize = require('./middleware/authorize');
 const pool = require('./db');
 require('dotenv').config();
 
@@ -23,6 +26,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/genres', genreRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/awards', awardRoutes);
+app.use('/api/admin', adminRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
