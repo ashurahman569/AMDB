@@ -49,7 +49,7 @@ const Header = ({ user, onLogin, onRegister, onLogout }) => {
     };
 
     // Check if user is admin
-    const isAdmin = user && user.user_type === 'admin';
+    const isAdminorMod = user && (user.user_type === 'admin' || user.user_type === 'moderator' || user.user_type === 'headadmin');
         // Debug logging
 
     
@@ -109,7 +109,7 @@ const Header = ({ user, onLogin, onRegister, onLogout }) => {
                     />
 
                     {/* Admin Panel Button - Only show for admin users */}
-                    {isAdmin && (
+                    {isAdminorMod && (
                         <button
                             onClick={handleAdminPanelClick}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-red-800 bg-red-700 transition-colors text-white border border-red-600"

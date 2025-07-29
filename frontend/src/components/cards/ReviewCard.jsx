@@ -40,17 +40,28 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
   // Check if user can see options
   const isReviewAuthor = user && user.id === review.user_id;
 
-  // Updated moderation logic:
-  // - Admin can moderate moderator and regular users (but not other admins)
-  // - Moderator can moderate regular users (but not admins or other moderators)
-  const isModerator = user && user.user_type === 'moderator';
+  // Updated moderation logic based on requirements:
+  const isHeadAdmin = user && user.user_type === 'headadmin';
   const isAdmin = user && user.user_type === 'admin';
+  const isModerator = user && user.user_type === 'moderator';
 
   let canModerate = false;
-  if (isAdmin && review.user_type !== 'admin' && !isReviewAuthor) {
-    canModerate = true; // Admin can moderate moderators and regular users
-  } else if (isModerator && review.user_type === 'regular' && !isReviewAuthor) {
-    canModerate = true; // Moderator can moderate regular users only
+  let canBan = false;
+
+  if (!isReviewAuthor) { // Only apply moderation if it's not the user's own review
+    if (isHeadAdmin) {
+      // HeadAdmin can moderate everyone (admin, moderator, regular)
+      canModerate = true;
+      canBan = review.user_type !== 'admin'; // HeadAdmin can ban moderators and regular users, but not admins
+    } else if (isAdmin) {
+      // Admin can moderate moderators and regular users (but not other admins or headadmins)
+      canModerate = review.user_type === 'moderator' || review.user_type === 'regular';
+      canBan = review.user_type === 'moderator' || review.user_type === 'regular';
+    } else if (isModerator) {
+      // Moderator can moderate regular users only
+      canModerate = review.user_type === 'regular';
+      canBan = review.user_type === 'regular';
+    }
   }
 
   const showOptions = isReviewAuthor || canModerate;
@@ -104,8 +115,8 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
             key={star}
             type="button"
             className={`text-xl transition-colors ${star <= (hoverRating || rating)
-                ? 'text-yellow-400'
-                : 'text-gray-400'
+              ? 'text-yellow-400'
+              : 'text-gray-400'
               } hover:text-yellow-400`}
             onClick={() => onRatingChange(star)}
             onMouseEnter={() => setHoverRating(star)}
@@ -264,54 +275,46 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
 
                 {showDropdown && (
                   <div className="absolute right-0 top-8 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10 min-w-[120px]">
+                    {/* Edit option - only for review author */}
                     {isReviewAuthor && (
-                      <>
-                        <button
-                          className="w-full px-3 py-2 text-left text-white hover:bg-gray-700 flex items-center gap-2 text-sm"
-                          onClick={() => {
-                            setShowEditModal(true);
-                            setShowDropdown(false);
-                          }}
-                        >
-                          <Edit2 className="w-3 h-3" />
-                          Edit
-                        </button>
-                        <button
-                          className="w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700 flex items-center gap-2 text-sm"
-                          onClick={() => {
-                            setShowDeleteModal(true);
-                            setShowDropdown(false);
-                          }}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Delete
-                        </button>
-                      </>
+                      <button
+                        className="w-full px-3 py-2 text-left text-white hover:bg-gray-700 flex items-center gap-2 text-sm"
+                        onClick={() => {
+                          setShowEditModal(true);
+                          setShowDropdown(false);
+                        }}
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        Edit
+                      </button>
                     )}
 
-                    {canModerate && (
-                      <>
-                        <button
-                          className="w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700 flex items-center gap-2 text-sm"
-                          onClick={() => {
-                            setShowDeleteModal(true);
-                            setShowDropdown(false);
-                          }}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Delete
-                        </button>
-                        <button
-                          className="w-full px-3 py-2 text-left text-orange-400 hover:bg-gray-700 flex items-center gap-2 text-sm border-t border-gray-600"
-                          onClick={() => {
-                            setShowBanModal(true);
-                            setShowDropdown(false);
-                          }}
-                        >
-                          <UserX className="w-3 h-3" />
-                          Ban User
-                        </button>
-                      </>
+                    {/* Delete option - for review author or moderators */}
+                    {(isReviewAuthor || canModerate) && (
+                      <button
+                        className="w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700 flex items-center gap-2 text-sm"
+                        onClick={() => {
+                          setShowDeleteModal(true);
+                          setShowDropdown(false);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete
+                      </button>
+                    )}
+
+                    {/* Ban option - only for moderators with ban permissions */}
+                    {canBan && (
+                      <button
+                        className="w-full px-3 py-2 text-left text-orange-400 hover:bg-gray-700 flex items-center gap-2 text-sm border-t border-gray-600"
+                        onClick={() => {
+                          setShowBanModal(true);
+                          setShowDropdown(false);
+                        }}
+                      >
+                        <UserX className="w-3 h-3" />
+                        Ban User
+                      </button>
                     )}
                   </div>
                 )}
@@ -336,10 +339,10 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
         </div>
       </div>
 
-      {/* Edit Modal */}
+      {/* Edit Modal - Fixed positioning */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-white">Edit Review</h3>
               <button
@@ -382,8 +385,8 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
                   onClick={handleEditReview}
                   disabled={isUpdating || editRating === 0}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${isUpdating || editRating === 0
-                      ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                      : 'bg-yellow-400 hover:bg-yellow-500 text-gray-900'
+                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                    : 'bg-yellow-400 hover:bg-yellow-500 text-gray-900'
                     }`}
                 >
                   {isUpdating ? 'Updating...' : 'Update Review'}
@@ -394,10 +397,10 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal - Fixed positioning */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-white">Delete Review</h3>
               <button
@@ -423,8 +426,8 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
                 onClick={handleDeleteReview}
                 disabled={isDeleting}
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${isDeleting
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                    : 'bg-red-600 hover:bg-red-700 text-white'
+                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                  : 'bg-red-600 hover:bg-red-700 text-white'
                   }`}
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
@@ -434,10 +437,10 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
         </div>
       )}
 
-      {/* Ban User Modal */}
+      {/* Ban User Modal - Fixed positioning */}
       {showBanModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-white">Ban User</h3>
               <button
@@ -475,8 +478,8 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
                 onClick={handleBanUser}
                 disabled={isBanning || !banReason.trim()}
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${isBanning || !banReason.trim()
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                    : 'bg-orange-600 hover:bg-orange-700 text-white'
+                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                  : 'bg-orange-600 hover:bg-orange-700 text-white'
                   }`}
               >
                 {isBanning ? 'Banning...' : 'Ban User'}

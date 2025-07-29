@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/common/Header';
 import Home from './pages/Home';
@@ -11,12 +11,62 @@ import PersonDetails from './pages/PersonDetails';
 import AdminPanel from './pages/AdminPanel';
 import Reviews from './pages/Reviews';
 import Users from './pages/Users';
+import Database from './pages/Database';
 import './styles/index.css';
+
 const BASE_URL = 'http://localhost:5000/api';
+
+// Utility functions for JWT handling
+const isTokenExpired = (token) => {
+  if (!token) return true;
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const currentTime = Date.now() / 1000;
+    return payload.exp < currentTime;
+  } catch (error) {
+    return true;
+  }
+};
+
+const getTokenExpirationTime = (token) => {
+  if (!token) return null;
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000; // Convert to milliseconds
+  } catch (error) {
+    return null;
+  }
+};
 
 const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Logout function that can be called from anywhere
+  const performLogout = useCallback(async (showAlert = true) => {
+    const token = localStorage.getItem('token');
+    try {
+      if (token) {
+        await fetch(`${BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      if (showAlert) {
+        alert('You have logged out successfully.');
+      }
+      setUser(null);
+    }
+  }, []);
 
   // Check if user is already logged in on app start
   useEffect(() => {
@@ -24,6 +74,13 @@ const App = () => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
+          // Check if token is expired before making API call
+          if (isTokenExpired(token)) {
+            localStorage.removeItem('token');
+            setLoading(false);
+            return;
+          }
+
           // Verify token with your backend
           const response = await fetch(`${BASE_URL}/auth/verify`, {
             method: 'GET',
@@ -49,6 +106,38 @@ const App = () => {
 
     checkAuthStatus();
   }, []);
+
+  // Set up automatic logout timer when token expires (Solution 1)
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    
+    if (!token || !user) return;
+
+    // Check if token is already expired
+    if (isTokenExpired(token)) {
+      performLogout(false);
+      return;
+    }
+
+    const expirationTime = getTokenExpirationTime(token);
+    if (!expirationTime) return;
+
+    const timeUntilExpiration = expirationTime - Date.now();
+    
+    if (timeUntilExpiration <= 0) {
+      performLogout(false);
+      return;
+    }
+
+    // Set timeout to automatically logout when token expires
+    // Subtract 1 second to logout just before actual expiration
+    const timeoutId = setTimeout(() => {
+      alert('Your session has expired. Please log in again.');
+      performLogout(false);
+    }, Math.max(0, timeUntilExpiration - 1000));
+
+    return () => clearTimeout(timeoutId);
+  }, [user, performLogout]);
 
   const handleLogin = async (email, password) => {
     try {
@@ -100,29 +189,13 @@ const App = () => {
   };
 
   const handleLogout = async () => {
-    const token = localStorage.getItem('token');
-    try {
-      if (token) {
-        await fetch(`${BASE_URL}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      localStorage.removeItem('token');
-      alert('You have logged out successfully.');
-      setUser(null);
-    }
+    await performLogout(true);
   };
 
   if (loading) {
     return <Loading/>;
   }
+
   return (
     <Router>
       <div className="min-h-screen bg-gray-900">
@@ -141,6 +214,7 @@ const App = () => {
           <Route path="/favourites" element={<Favourites user={user} />} />
           <Route path="/people/:person_id" element={<PersonDetails user={user}/>} />
           <Route path="/569adminpanel325" element={<AdminPanel user={user}/>} />
+          <Route path="/569adminpanel325/database" element={<Database user={user}/>} />
           <Route path="/569adminpanel325/users" element={<Users user={user}/>} />
         </Routes>
       </div>

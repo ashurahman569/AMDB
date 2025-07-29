@@ -49,7 +49,7 @@ const Users = ({ user }) => {
             return;
         }
 
-        if (user.user_type !== 'admin' && user.user_type !== 'moderator') {
+        if (user.user_type == 'regular') {
             navigate('/');
             return;
         }
@@ -137,11 +137,17 @@ const Users = ({ user }) => {
         }
     };
 
-    const handlePromoteUser = async (userId, username) => {
-        if (!window.confirm(`Are you sure you want to promote ${username} to moderator?`)) {
-            return;
+    const handlePromoteUser = async (userId, username, user_type) => {
+        if (user_type === 'regular') {
+            if (!window.confirm(`Are you sure you want to promote ${username} to moderator?`)) {
+                return;
+            }
         }
-
+        else if (user_type === 'moderator') {
+            if (!window.confirm(`Are you sure you want to promote ${username} to admin?`)) {
+                return;
+            }
+        }
         try {
             const token = user?.token || localStorage.getItem('token');
             const response = await fetch(`${BASE_URL}/admin/promote-user`, {
@@ -154,7 +160,8 @@ const Users = ({ user }) => {
             });
 
             if (response.ok) {
-                alert('User promoted to moderator successfully!');
+                if (user_type === 'regular') alert('User promoted to moderator successfully!');
+                else if (user_type === 'moderator') alert('User promoted to admin successfully!');
                 await fetchUsers();
             } else {
                 const errorData = await response.json();
@@ -166,9 +173,16 @@ const Users = ({ user }) => {
         }
     };
 
-    const handleDemoteUser = async (userId, username) => {
-        if (!window.confirm(`Are you sure you want to demote ${username} to regular user?`)) {
-            return;
+    const handleDemoteUser = async (userId, username, user_type) => {
+        if (user_type === 'moderator') {
+            if (!window.confirm(`Are you sure you want to demote ${username} to regular user?`)) {
+                return;
+            }
+        }
+        else if (user_type === 'admin') {
+            if (!window.confirm(`Are you sure you want to demote ${username} to moderator?`)) {
+                return;
+            }
         }
 
         try {
@@ -183,7 +197,8 @@ const Users = ({ user }) => {
             });
 
             if (response.ok) {
-                alert('Moderator demoted to regular user successfully!');
+                if(user_type==='moderator') alert('User demoted to regular user successfully!');
+                else if(user_type==='admin') alert('User demoted to moderator successfully!');
                 await fetchUsers();
             } else {
                 const errorData = await response.json();
@@ -281,7 +296,18 @@ const Users = ({ user }) => {
     const filteredUsers = users.filter(userData => {
         const matchesSearch = userData.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
             userData.email.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesFilter = filterType === 'all' || userData.user_type === filterType;
+
+        // Modified filter logic to include headadmin with admin  
+        let matchesFilter;
+        if (filterType === 'all') {
+            matchesFilter = true;
+        } else if (filterType === 'admin') {
+            // Include both admin and headadmin when "admin" is selected  
+            matchesFilter = userData.user_type === 'admin' || userData.user_type === 'headadmin';
+        } else {
+            matchesFilter = userData.user_type === filterType;
+        }
+
         return matchesSearch && matchesFilter;
     });
 
@@ -310,6 +336,7 @@ const Users = ({ user }) => {
 
     const getUserTypeColor = (userType) => {
         switch (userType) {
+            case 'headadmin': return 'text-sky-400 bg-sky-900';
             case 'admin': return 'text-red-400 bg-red-900';
             case 'moderator': return 'text-yellow-400 bg-yellow-900';
             default: return 'text-green-400 bg-green-900';
@@ -376,10 +403,30 @@ const Users = ({ user }) => {
                     </div>
                 </div>
             );
+        } else if (activity.activity_type === 'unban') {
+            return (
+                <div key={`unban-${activity.unbanned_id}`} className="border-l-4 border-green-500 pl-4 py-3">
+                    <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                            <UserCheck size={16} className="text-white" />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-white">Unbanned user "{activity.unbanned_username}"</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                                <Clock size={14} />
+                                <span>{formatDateTime(activity.unban_date)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
         }
+
     };
 
-    if (!user || (user.user_type !== 'admin' && user.user_type !== 'moderator')) {
+    if (!user || (user.user_type == 'regular')) {
         return (
             <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400"></div>
@@ -529,7 +576,9 @@ const Users = ({ user }) => {
                                                 </td>
                                                 <td className="px-4 py-4 w-[12%]">
                                                     <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getUserTypeColor(userData.user_type)}`}>
-                                                        {userData.user_type.charAt(0).toUpperCase() + userData.user_type.slice(1)}
+                                                        {userData.user_type === 'headadmin'
+                                                            ? 'Head Admin'
+                                                            : userData.user_type.charAt(0).toUpperCase() + userData.user_type.slice(1)}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-4 w-[13%]">
@@ -546,7 +595,7 @@ const Users = ({ user }) => {
                                                 </td>
                                                 <td className="px-4 py-4 w-[20%]">
                                                     <div className="flex items-center gap-1">
-                                                        {/* View Activity Button */}
+                                                        {/* View Activity But</td>ton */}
                                                         <button
                                                             onClick={() => fetchUserActivity(userData.user_id, userData)}
                                                             disabled={activityLoading}
@@ -558,11 +607,11 @@ const Users = ({ user }) => {
                                                         </button>
 
                                                         {/* Admin-only promote/demote actions */}
-                                                        {user.user_type === 'admin' && (
+                                                        {(user.user_type === 'admin' || user.user_type === 'headadmin') && (
                                                             <>
-                                                                {userData.user_type === 'regular' && (
+                                                                {(userData.user_type === 'regular') && (
                                                                     <button
-                                                                        onClick={() => handlePromoteUser(userData.user_id, userData.username)}
+                                                                        onClick={() => handlePromoteUser(userData.user_id, userData.username,userData.user_type)}
                                                                         className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors whitespace-nowrap"
                                                                         title="Promote to Moderator"
                                                                     >
@@ -570,11 +619,31 @@ const Users = ({ user }) => {
                                                                         <span>Promote</span>
                                                                     </button>
                                                                 )}
+                                                                {(userData.user_type === 'moderator') && (
+                                                                    <button
+                                                                        onClick={() => handlePromoteUser(userData.user_id, userData.username,userData.user_type)}
+                                                                        className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors whitespace-nowrap"
+                                                                        title="Promote to Admin"
+                                                                    >
+                                                                        <ChevronUp size={12} />
+                                                                        <span>Promote</span>
+                                                                    </button>
+                                                                )}
                                                                 {userData.user_type === 'moderator' && (
                                                                     <button
-                                                                        onClick={() => handleDemoteUser(userData.user_id, userData.username)}
+                                                                        onClick={() => handleDemoteUser(userData.user_id, userData.username,userData.user_type)}
                                                                         className="flex items-center gap-1 px-2 py-1 bg-orange-600 hover:bg-orange-700 text-white text-xs rounded transition-colors whitespace-nowrap"
                                                                         title="Demote to Regular"
+                                                                    >
+                                                                        <ChevronDown size={12} />
+                                                                        <span>Demote</span>
+                                                                    </button>
+                                                                )}
+                                                                {userData.user_type === 'admin' && user.user_type === 'headadmin' && (
+                                                                    <button
+                                                                        onClick={() => handleDemoteUser(userData.user_id, userData.username,userData.user_type)}
+                                                                        className="flex items-center gap-1 px-2 py-1 bg-orange-600 hover:bg-orange-700 text-white text-xs rounded transition-colors whitespace-nowrap"
+                                                                        title="Demote to Moderator"
                                                                     >
                                                                         <ChevronDown size={12} />
                                                                         <span>Demote</span>
@@ -584,7 +653,7 @@ const Users = ({ user }) => {
                                                         )}
 
                                                         {/* Ban action for non-admin/moderator users */}
-                                                        {userData.user_type !== 'admin' && userData.user_type !== 'moderator' && (
+                                                        {(userData.user_type == 'regular' || userData.user_type === 'moderator' && (user.user_type === 'admin' || user.user_type === 'headadmin')) && (
                                                             <button
                                                                 onClick={() => openBanModal(userData)}
                                                                 className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors whitespace-nowrap"
@@ -595,7 +664,7 @@ const Users = ({ user }) => {
                                                         )}
 
                                                         {/* Protected status for admin/moderator */}
-                                                        {(userData.user_type === 'admin' || (userData.user_type === 'moderator' && user.user_type !== 'admin')) && (
+                                                        {(userData.user_type === 'admin' || userData.user_type === 'headadmin' || (userData.user_type === 'moderator' && user.user_type == 'moderator')) && (
                                                             <span className="text-gray-500 text-xs whitespace-nowrap">Protected</span>
                                                         )}
                                                     </div>
@@ -622,7 +691,7 @@ const Users = ({ user }) => {
                                             <th className="px-4 py-4 text-left text-sm font-medium text-gray-300 w-[15%]">Ban Date</th>
                                             <th className="px-4 py-4 text-left text-sm font-medium text-gray-300 w-[20%]">Ban Reason</th>
                                             <th className="px-4 py-4 text-left text-sm font-medium text-gray-300 w-[10%]">Banned By</th>
-                                            {user.user_type === 'admin' && (
+                                            {(user.user_type === 'admin' || user.user_type === 'moderator' || user.user_type === 'headadmin') && (
                                                 <th className="px-4 py-4 text-left text-sm font-medium text-gray-300 w-[10%]">Actions</th>
                                             )}
                                         </tr>
@@ -665,7 +734,7 @@ const Users = ({ user }) => {
                                                         {userData.banner_name || 'Unknown'}
                                                     </span>
                                                 </td>
-                                                {user.user_type === 'admin' && (
+                                                {(user.user_type === 'admin' || user.user_type === 'moderator' || user.user_type === 'headadmin') && (
                                                     <td className="px-4 py-4 w-[10%]">
                                                         <button
                                                             onClick={() => handleUnbanUser(userData.user_id)}
@@ -718,7 +787,7 @@ const Users = ({ user }) => {
                             <div>
                                 <p className="text-gray-400 text-sm">Admin/Moderators</p>
                                 <p className="text-3xl font-bold text-yellow-400">
-                                    {users.filter(u => u.user_type === 'admin' || u.user_type === 'moderator').length}
+                                    {users.filter(u => u.user_type === 'admin' || u.user_type === 'moderator' || u.user_type === 'headadmin').length}
                                 </p>
                             </div>
                             <Shield size={24} className="text-yellow-400" />
@@ -781,6 +850,12 @@ const Users = ({ user }) => {
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                                                     <span>Ban Actions ({userActivities.filter(a => a.activity_type === 'ban').length})</span>
+                                                </div>
+                                            )}
+                                            {selectedUserActivity?.user_type !== 'regular' && (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                                    <span>Unban Actions ({userActivities.filter(a => a.activity_type === 'unban').length})</span>
                                                 </div>
                                             )}
                                         </div>

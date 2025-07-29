@@ -269,7 +269,7 @@ async function searchMovies({ search, genre, year, sortBy, order }) {
   if (search) {
     paramCount++;
     searchParamIndex = paramCount;
-    conditions.push(`m.title ILIKE ${paramCount}`);
+    conditions.push(`m.title ILIKE $${paramCount}`);
     values.push(`%${search}%`);
   }
 
@@ -304,17 +304,8 @@ async function searchMovies({ search, genre, year, sortBy, order }) {
              m.mpaa_rating, m.budget, m.box_office, m.poster_url, m.trailer_url
   `;
 
-  // Add sorting - prioritize exact matches first, then apply user sorting
-  if (search && searchParamIndex) {
-    query += ` ORDER BY 
-      CASE 
-        WHEN UPPER(m.title) = UPPER(${searchParamIndex}) THEN 1 
-        ELSE 2 
-      END,
-      ${getSortClause(sortBy)} ${order.toUpperCase()}`;
-  } else {
-    query += ` ORDER BY ${getSortClause(sortBy)} ${order.toUpperCase()}`;
-  }
+  // Add sorting
+  query += ` ORDER BY ${getSortClause(sortBy)} ${order.toUpperCase()}`;
 
   const result = await pool.query(query, values);
   return result.rows;

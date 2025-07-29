@@ -23,7 +23,7 @@ const AdminPanel = ({ user }) => {
             return;
         }
 
-        if (user.user_type !== 'admin') {
+        if (user.user_type == 'regular') {
             navigate('/');
             return;
         }
@@ -97,7 +97,7 @@ const AdminPanel = ({ user }) => {
     }
 
     // Show loading while redirect is happening for non-admin users  
-    if (user.user_type !== 'admin') {
+    if (user.user_type == 'regular') {
         return (
             <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400"></div>
@@ -153,22 +153,41 @@ const AdminPanel = ({ user }) => {
 
                     {/* View Database Option */}
                     <div className="group">
-                        <button
-                            onClick={handleViewDatabase}
-                            className="w-full h-64 bg-gray-800 hover:bg-gray-700 border-2 border-gray-700 hover:border-blue-500 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
-                        >
-                            <div className="flex flex-col items-center justify-center h-full p-6">
-                                <div className="w-20 h-20 bg-blue-600 group-hover:bg-blue-500 rounded-full flex items-center justify-center mb-6 transition-colors">
-                                    <Database size={40} className="text-white" />
+                        {(user.user_type === 'admin' || user.user_type === 'headadmin') ? (
+                            <button
+                                onClick={handleViewDatabase}
+                                className="w-full h-64 bg-gray-800 hover:bg-gray-700 border-2 border-gray-700 hover:border-blue-500 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
+                            >
+                                <div className="flex flex-col items-center justify-center h-full p-6">
+                                    <div className="w-20 h-20 bg-blue-600 group-hover:bg-blue-500 rounded-full flex items-center justify-center mb-6 transition-colors">
+                                        <Database size={40} className="text-white" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold mb-3 group-hover:text-blue-400 transition-colors">
+                                        View Database
+                                    </h2>
+                                    <p className="text-gray-300 text-center leading-relaxed">
+                                        Browse all tables, view records, and analyze your movie database structure
+                                    </p>
                                 </div>
-                                <h2 className="text-2xl font-bold mb-3 group-hover:text-blue-400 transition-colors">
-                                    View Database
-                                </h2>
-                                <p className="text-gray-300 text-center leading-relaxed">
-                                    Browse all tables, view records, and analyze your movie database structure
-                                </p>
+                            </button>
+                        ) : (
+                            <div
+                                className="w-full h-64 bg-gray-800 border-2 border-gray-700 rounded-xl opacity-60 cursor-not-allowed"
+                                title="Only admins can access this option"
+                            >
+                                <div className="flex flex-col items-center justify-center h-full p-6">
+                                    <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mb-6">
+                                        <Database size={40} className="text-white" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold mb-3 text-blue-400">
+                                        View Database
+                                    </h2>
+                                    <p className="text-gray-300 text-center leading-relaxed">
+                                        Only admins can browse all tables and view records
+                                    </p>
+                                </div>
                             </div>
-                        </button>
+                        )}
                     </div>
 
                     {/* See Users Option */}
@@ -191,25 +210,44 @@ const AdminPanel = ({ user }) => {
                         </button>
                     </div>
 
-                    {/* Add New Record Option */}
-                    <div className="group md:col-span-2 lg:col-span-1">
-                        <button
-                            onClick={handleAddNewRecord}
-                            className="w-full h-64 bg-gray-800 hover:bg-gray-700 border-2 border-gray-700 hover:border-purple-500 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
-                        >
-                            <div className="flex flex-col items-center justify-center h-full p-6">
-                                <div className="w-20 h-20 bg-purple-600 group-hover:bg-purple-500 rounded-full flex items-center justify-center mb-6 transition-colors">
-                                    <Plus size={40} className="text-white" />
-                                </div>
-                                <h2 className="text-2xl font-bold mb-3 group-hover:text-purple-400 transition-colors">
-                                    Add New Record
-                                </h2>
-                                <p className="text-gray-300 text-center leading-relaxed">
-                                    Add new movies, actors, directors, and other database entries
-                                </p>
-                            </div>
-                        </button>
-                    </div>
+                    {/* Add New Record Option */}  
+                    <div className="group md:col-span-2 lg:col-span-1">  
+                        {(user.user_type === 'admin' || user.user_type === 'headadmin') ? (  
+                            <button  
+                                onClick={handleAddNewRecord}  
+                                className="w-full h-64 bg-gray-800 hover:bg-gray-700 border-2 border-gray-700 hover:border-purple-500 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"  
+                            >  
+                                <div className="flex flex-col items-center justify-center h-full p-6">  
+                                    <div className="w-20 h-20 bg-purple-600 group-hover:bg-purple-500 rounded-full flex items-center justify-center mb-6 transition-colors">  
+                                        <Plus size={40} className="text-white" />  
+                                    </div>  
+                                    <h2 className="text-2xl font-bold mb-3 group-hover:text-purple-400 transition-colors">  
+                                        Add New Record  
+                                    </h2>  
+                                    <p className="text-gray-300 text-center leading-relaxed">  
+                                        Add new movies, actors, directors, and other database entries  
+                                    </p>  
+                                </div>  
+                            </button>  
+                        ) : (  
+                            <div  
+                                className="w-full h-64 bg-gray-800 border-2 border-gray-700 rounded-xl opacity-60 cursor-not-allowed"  
+                                title="Only admins can access this option"  
+                            >  
+                                <div className="flex flex-col items-center justify-center h-full p-6">  
+                                    <div className="w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center mb-6">  
+                                        <Plus size={40} className="text-white" />  
+                                    </div>  
+                                    <h2 className="text-2xl font-bold mb-3 text-purple-400">  
+                                        Add New Record  
+                                    </h2>  
+                                    <p className="text-gray-300 text-center leading-relaxed">  
+                                        Only admins can add new database entries  
+                                    </p>  
+                                </div>  
+                            </div>  
+                        )}  
+                    </div>  
                 </div>
 
                 {/* Statistics Cards */}

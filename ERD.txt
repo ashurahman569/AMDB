@@ -137,7 +137,7 @@ CREATE TABLE "Favourites" (
 
 CREATE TABLE "Banned" (  
   "banned_id" SERIAL PRIMARY KEY,  
-  "user_id" int UNIQUE NOT NULL,  
+  "user_id" int NOT NULL,  
   "username" varchar NOT NULL,  
   "email" varchar NOT NULL,  
   "password_hash" varchar NOT NULL,  
@@ -146,6 +146,18 @@ CREATE TABLE "Banned" (
   "ban_date" timestamp DEFAULT CURRENT_TIMESTAMP,  
   "ban_reason" text,  
   "banner_id" int NOT NULL  -- ID of the moderator/admin who issued the ban  
+); 
+
+CREATE TABLE "Unbanned" (  
+  "unbanned_id" SERIAL PRIMARY KEY,  
+  "user_id" int NOT NULL,  
+  "username" varchar NOT NULL,  
+  "email" varchar NOT NULL,  
+  "password_hash" varchar NOT NULL,  
+  "join_date" date,  
+  "user_type" varchar,  
+  "unban_date" timestamp DEFAULT CURRENT_TIMESTAMP,  
+  "unbanner_id" int NOT NULL  -- ID of the moderator/admin who issued the unban  
 ); 
   
 -- Add foreign key constraints  
