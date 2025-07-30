@@ -80,7 +80,7 @@ const AdminPanel = ({ user }) => {
     const handleAddNewRecord = () => {
         // Navigate to add new record page  
         console.log('Navigate to add new record');
-        // navigate('/569adminpanel325/add-record');  
+        navigate('/569adminpanel325/addrecord');  
     };
 
     const handleGoBack = () => {

@@ -1,0 +1,18 @@
+CREATE SEQUENCE "Award_award_id_seq"
+    START WITH 325
+    INCREMENT BY 1
+    OWNED BY "Award"."award_id";
+
+ALTER TABLE "Award"
+ALTER COLUMN "award_id"
+SET DEFAULT nextval('"Award_award_id_seq"'::regclass);
+
+
+CREATE SEQUENCE "Person_person_id_seq"
+    START WITH 5557097
+    INCREMENT BY 1
+    OWNED BY "Person"."person_id";
+
+ALTER TABLE "Person"
+ALTER COLUMN "person_id"
+SET DEFAULT nextval('"Person_person_id_seq"'::regclass);

@@ -12,6 +12,7 @@ import AdminPanel from './pages/AdminPanel';
 import Reviews from './pages/Reviews';
 import Users from './pages/Users';
 import Database from './pages/Database';
+import AddRecord from './pages/AddRecord';
 import './styles/index.css';
 
 const BASE_URL = 'http://localhost:5000/api';
@@ -216,6 +217,7 @@ const App = () => {
           <Route path="/569adminpanel325" element={<AdminPanel user={user}/>} />
           <Route path="/569adminpanel325/database" element={<Database user={user}/>} />
           <Route path="/569adminpanel325/users" element={<Users user={user}/>} />
+          <Route path="/569adminpanel325/addrecord" element={<AddRecord user={user}/>} />
         </Routes>
       </div>
     </Router>
