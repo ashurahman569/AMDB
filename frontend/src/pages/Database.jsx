@@ -32,6 +32,7 @@ const Database = ({ user }) => {
     const [currentActorId, setCurrentActorId] = useState(null);
     const [currentDirectorId, setCurrentDirectorId] = useState(null);
     const [currentAwardId, setCurrentAwardId] = useState(null);
+    const [editingAward, setEditingAward] = useState(null);
 
     // Edit modal states
     const [showEditModal, setShowEditModal] = useState(false);
@@ -268,15 +269,17 @@ const Database = ({ user }) => {
 
     // Updated openEditModal function to handle both movies and people
     const openEditModal = (item) => {
-        // Check if it's a movie or person by checking for movie_id vs person_id
+        // Check if it's a movie, person, or award    
         if (item.movie_id) {
-            // It's a movie
+            // It's a movie    
             setEditingMovie(item);
             setEditingPerson(null);
+            setEditingAward(null);
             setEditFormData({
                 title: item.title || '',
                 release_date: item.release_date ? item.release_date.split('T')[0] : '',
                 runtime: item.runtime || '',
+                about: item.about || '', // ADD THIS LINE  
                 plot: item.plot || '',
                 mpaa_rating: item.mpaa_rating || '',
                 budget: item.budget || '',
@@ -284,9 +287,10 @@ const Database = ({ user }) => {
                 poster_url: item.poster_url || ''
             });
         } else if (item.person_id) {
-            // It's a person
+            // ... rest of the person logic remains the same  
             setEditingPerson(item);
             setEditingMovie(null);
+            setEditingAward(null);
             setEditFormData({
                 first_name: item.first_name || '',
                 last_name: item.last_name || '',
@@ -296,29 +300,40 @@ const Database = ({ user }) => {
                 biography: item.biography || '',
                 photo_url: item.photo_url || ''
             });
+        } else if (item.award_id) {
+            // ... rest of the award logic remains the same  
+            setEditingAward(item);
+            setEditingMovie(null);
+            setEditingPerson(null);
+            setEditFormData({
+                name: item.name || '',
+                year: item.year || ''
+            });
         }
         setShowEditModal(true);
     };
-
+    // Update the closeEditModal function  
     const closeEditModal = () => {
         setShowEditModal(false);
         setEditingMovie(null);
         setEditingPerson(null);
+        setEditingAward(null);
         setEditFormData({});
     };
 
+
     const isFormChanged = () => {
         if (editingMovie) {
-            // Movie form change detection
+            // Movie form change detection    
             const fieldsToCheck = [
-                "title", "release_date", "runtime", "plot",
+                "title", "release_date", "runtime", "about", "plot", // ADD "about" HERE  
                 "mpaa_rating", "budget", "box_office", "poster_url"
             ];
 
             for (const field of fieldsToCheck) {
                 const original = editingMovie[field] || '';
                 const edited = editFormData[field] || '';
-                // Handle date format if needed
+                // Handle date format if needed    
                 if (field === "release_date" && original) {
                     if (original.split('T')[0] !== edited) return true;
                 } else if (original.toString() !== edited.toString()) {
@@ -327,7 +342,7 @@ const Database = ({ user }) => {
             }
             return false;
         } else if (editingPerson) {
-            // Person form change detection
+            // Person form change detection  
             const fieldsToCheck = [
                 "first_name", "last_name", "birth_date", "death_date",
                 "birthplace", "biography", "photo_url"
@@ -336,10 +351,22 @@ const Database = ({ user }) => {
             for (const field of fieldsToCheck) {
                 const original = editingPerson[field] || '';
                 const edited = editFormData[field] || '';
-                // Handle date format if needed
+                // Handle date format if needed  
                 if ((field === "birth_date" || field === "death_date") && original) {
                     if (original.split('T')[0] !== edited) return true;
                 } else if (original.toString() !== edited.toString()) {
+                    return true;
+                }
+            }
+            return false;
+        } else if (editingAward) {
+            // Award form change detection  
+            const fieldsToCheck = ["name", "year"];
+
+            for (const field of fieldsToCheck) {
+                const original = editingAward[field] || '';
+                const edited = editFormData[field] || '';
+                if (original.toString() !== edited.toString()) {
                     return true;
                 }
             }
@@ -360,7 +387,7 @@ const Database = ({ user }) => {
             const token = user?.token || localStorage.getItem('token');
 
             if (editingMovie) {
-                // Handle movie edit
+                // Handle movie edit    
                 const response = await fetch(`${BASE_URL}/admin/movies/${editingMovie.movie_id}`, {
                     method: 'PUT',
                     headers: {
@@ -371,13 +398,13 @@ const Database = ({ user }) => {
                         title: editFormData.title,
                         release_date: editFormData.release_date,
                         runtime: editFormData.runtime,
+                        about: editFormData.about, // ADD THIS LINE  
                         plot: editFormData.plot,
-                        about: editingMovie.about || '', // Provide fallback if about not editable
                         mpaa_rating: editFormData.mpaa_rating,
                         budget: editFormData.budget,
                         box_office: editFormData.box_office,
                         poster_url: editFormData.poster_url,
-                        trailer_url: editingMovie.trailer_url || '', // Provide fallback
+                        trailer_url: editingMovie.trailer_url || '', // Keep existing trailer_url  
                     }),
                 });
 
@@ -387,7 +414,7 @@ const Database = ({ user }) => {
 
                 alert('Movie updated successfully!');
             } else if (editingPerson) {
-                // Handle person edit
+                // Handle person edit  
                 const response = await fetch(`${BASE_URL}/admin/people/${editingPerson.person_id}`, {
                     method: 'PUT',
                     headers: {
@@ -410,16 +437,34 @@ const Database = ({ user }) => {
                 }
 
                 alert('Person updated successfully!');
+            } else if (editingAward) {
+                // Handle award edit  
+                const response = await fetch(`${BASE_URL}/admin/awards/${editingAward.award_id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        name: editFormData.name,
+                        year: editFormData.year
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                alert('Award updated successfully!');
             }
 
             closeEditModal();
-            fetchAllData(); // Refresh data
+            fetchAllData(); // Refresh data  
         } catch (err) {
             console.error('Error updating:', err);
-            alert(`Failed to update ${editingMovie ? 'movie' : 'person'}`);
+            alert(`Failed to update ${editingMovie ? 'movie' : editingPerson ? 'person' : 'award'}`);
         }
     };
-
     const deleteMovie = async () => {
         if (!window.confirm(`Are you sure you want to delete "${editingMovie.title}"? This will remove all related data and cannot be undone.`)) {
             return;
@@ -473,6 +518,34 @@ const Database = ({ user }) => {
         } catch (err) {
             console.error('Error deleting person:', err);
             alert('Failed to delete person');
+        }
+    };
+
+    const deleteAward = async () => {
+        if (!window.confirm(`Are you sure you want to delete "${editingAward.name}"? This will remove all related data and cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const token = user?.token || localStorage.getItem('token');
+            const response = await fetch(`${BASE_URL}/admin/awards/${editingAward.award_id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            alert('Award deleted successfully!');
+            closeEditModal();
+            fetchAllData(); // Refresh data  
+        } catch (err) {
+            console.error('Error deleting award:', err);
+            alert('Failed to delete award');
         }
     };
 
@@ -1092,18 +1165,18 @@ const Database = ({ user }) => {
         return (
             <>
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[600px]">
+                    <table className="w-full min-w-[800px]">
                         <thead className="bg-gray-700">
                             <tr>
-                                <th className="px-4 py-4 text-left text-sm font-medium text-gray-300 w-[30%]">Award Name</th>
-                                <th className="px-4 py-4 text-left text-sm font-medium text-gray-300 w-[20%]">Year</th>
-                                <th className="px-4 py-4 text-left text-sm font-medium text-gray-300 w-[50%]">Actions</th>
+                                <th className="px-4 py-4 text-left text-sm font-medium text-gray-300 w-[25%]">Award Name</th>
+                                <th className="px-4 py-4 text-left text-sm font-medium text-gray-300 w-[15%]">Year</th>
+                                <th className="px-4 py-4 text-left text-sm font-medium text-gray-300 w-[60%]">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-700">
                             {paginatedAwards.map((award) => (
                                 <tr key={award.award_id} className="hover:bg-gray-700">
-                                    <td className="px-4 py-4 w-[30%]">
+                                    <td className="px-4 py-4 w-[25%]">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-yellow-600 rounded-full flex items-center justify-center flex-shrink-0">
                                                 <Award size={20} className="text-white" />
@@ -1114,30 +1187,39 @@ const Database = ({ user }) => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-4 w-[20%]">
+                                    <td className="px-4 py-4 w-[15%]">
                                         <div className="flex items-center gap-2">
                                             <Calendar size={16} className="text-gray-400 flex-shrink-0" />
                                             <span className="text-gray-300">{award.year || 'N/A'}</span>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-4 w-[50%]">
-                                        <button
-                                            onClick={() => {
-                                                setCurrentAwardId(award.award_id); // Set this first
-                                                fetchModalData(
-                                                    `/award-winners/${award.award_id}`,
-                                                    `Winners of ${award.name} (${award.year})`,
-                                                    null, // movieId
-                                                    null, // actorId  
-                                                    null, // directorId
-                                                    award.award_id // awardId
-                                                );
-                                            }}
-                                            className="flex items-center gap-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
-                                        >
-                                            <Eye size={16} />
-                                            <span>View Winners</span>
-                                        </button>
+                                    <td className="px-4 py-4 w-[60%]">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => openEditModal(award)}
+                                                className="flex items-center gap-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded transition-colors whitespace-nowrap w-[80px] justify-center"
+                                            >
+                                                <Edit size={12} />
+                                                <span>Edit</span>
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setCurrentAwardId(award.award_id); // Set this first  
+                                                    fetchModalData(
+                                                        `/award-winners/${award.award_id}`,
+                                                        `Winners of ${award.name} (${award.year})`,
+                                                        null, // movieId  
+                                                        null, // actorId    
+                                                        null, // directorId  
+                                                        award.award_id // awardId  
+                                                    );
+                                                }}
+                                                className="flex items-center gap-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
+                                            >
+                                                <Eye size={16} />
+                                                <span>View Winners</span>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -1793,13 +1875,15 @@ const Database = ({ user }) => {
                 </div>
             )}
 
-            {/* Edit Movie Modal */}
+            {/* Edit Modal */}
             {showEditModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-gray-800 p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold text-white">
-                                {editingMovie ? `Edit Movie: ${editingMovie.title}` : `Edit Person: ${editingPerson?.first_name} ${editingPerson?.last_name}`}
+                                {editingMovie ? `Edit Movie: ${editingMovie.title}` :
+                                    editingPerson ? `Edit Person: ${editingPerson?.first_name} ${editingPerson?.last_name}` :
+                                        editingAward ? `Edit Award: ${editingAward.name}` : 'Edit Item'}
                             </h2>
                             <button
                                 onClick={closeEditModal}
@@ -1810,6 +1894,7 @@ const Database = ({ user }) => {
                         </div>
 
                         <form onSubmit={handleEditSubmit}>
+                            {/* Movie Edit Form */}
                             {editingMovie && (
                                 <>
                                     <div className="mb-4">
@@ -1853,6 +1938,19 @@ const Database = ({ user }) => {
 
                                     <div className="mb-4">
                                         <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            About
+                                        </label>
+                                        <textarea
+                                            value={editFormData.about || ''}
+                                            onChange={(e) => setEditFormData({ ...editFormData, about: e.target.value })}
+                                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            rows="3"
+                                            placeholder="Brief description or summary of the movie"
+                                        />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
                                             Plot
                                         </label>
                                         <textarea
@@ -1860,6 +1958,7 @@ const Database = ({ user }) => {
                                             onChange={(e) => setEditFormData({ ...editFormData, plot: e.target.value })}
                                             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                             rows="4"
+                                            placeholder="Detailed plot description"
                                         />
                                     </div>
 
@@ -1881,6 +1980,7 @@ const Database = ({ user }) => {
                                             </label>
                                             <input
                                                 type="number"
+                                                step="0.1"
                                                 value={editFormData.budget || ''}
                                                 onChange={(e) => setEditFormData({ ...editFormData, budget: e.target.value })}
                                                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1893,6 +1993,7 @@ const Database = ({ user }) => {
                                             </label>
                                             <input
                                                 type="number"
+                                                step="0.1"
                                                 value={editFormData.box_office || ''}
                                                 onChange={(e) => setEditFormData({ ...editFormData, box_office: e.target.value })}
                                                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -1915,6 +2016,7 @@ const Database = ({ user }) => {
                                 </>
                             )}
 
+                            {/* Person Edit Form */}
                             {editingPerson && (
                                 <>
                                     <div className="grid grid-cols-2 gap-4 mb-4">
@@ -2007,13 +2109,47 @@ const Database = ({ user }) => {
                                 </>
                             )}
 
+                            {/* Award Edit Form - THIS WAS MISSING */}
+                            {editingAward && (
+                                <>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            Award Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editFormData.name || ''}
+                                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            Year
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={editFormData.year || ''}
+                                            onChange={(e) => setEditFormData({ ...editFormData, year: e.target.value })}
+                                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            min="1900"
+                                            max="2030"
+                                            required
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Form Buttons */}
                             <div className="flex justify-between">
                                 <button
                                     type="button"
-                                    onClick={editingMovie ? deleteMovie : deletePerson}
+                                    onClick={editingMovie ? deleteMovie : editingPerson ? deletePerson : editingAward ? deleteAward : null}
                                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
                                 >
-                                    Delete {editingMovie ? 'Movie' : 'Person'}
+                                    Delete {editingMovie ? 'Movie' : editingPerson ? 'Person' : editingAward ? 'Award' : 'Item'}
                                 </button>
                                 <div className="flex gap-3">
                                     <button

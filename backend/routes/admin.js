@@ -80,7 +80,7 @@ router.get('/people', async (req, res) => {
 //for getting all awards
 router.get('/awards', async (req, res) => {
     try {
-        const allAwards = await pool.query('SELECT * FROM "Award" ORDER BY award_id');
+        const allAwards = await pool.query('SELECT * FROM "Award" ORDER BY year ASC, award_id ASC');
         res.json(allAwards.rows);
     } catch (err) {
         console.error(err.message);
@@ -190,6 +190,47 @@ router.put('/people/:personId', authorize, getUserInfo, requireAdmin, async (req
             biography, photo_url, personId
         ]);
         res.json({ message: 'Person updated successfully' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+//api to edit award record
+router.put('/awards/:awardId', authorize, getUserInfo, requireAdmin, async (req, res) => {
+    const { awardId } = req.params;
+    const { name, year} = req.body;
+    try {
+        const updateQuery = `
+            UPDATE "Award"
+            SET name = $1, year = $2
+            WHERE award_id = $3
+        `;
+        await pool.query(updateQuery, [name, year, awardId]);
+        res.json({ message: 'Award updated successfully' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+//api to delete award record
+router.delete('/awards/:awardId', authorize, getUserInfo, requireAdmin, async (req, res) => {
+    const { awardId } = req.params;
+    try {
+        // Check if the award exists
+        const checkAward = await pool.query(
+            'SELECT * FROM "Award" WHERE award_id = $1',
+            [awardId]
+        );
+
+        if (checkAward.rows.length === 0) {
+            return res.status(404).json({ error: 'Award not found' });
+        }
+
+        // Delete the award
+        await pool.query('DELETE FROM "Award" WHERE award_id = $1', [awardId]);
+        res.json({ message: 'Award deleted successfully' });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
