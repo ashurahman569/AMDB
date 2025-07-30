@@ -1728,6 +1728,7 @@ const Database = ({ user }) => {
                                 onClick={() => {
                                     setActiveTab(tab.key);
                                     setCurrentPage(1); // Reset to first page when switching tabs
+                                    setSearchTerm(''); // Clear search term when switching tabs
                                 }}
                                 className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 ${isActive
                                     ? `bg-${color}-600 text-white`
