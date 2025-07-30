@@ -101,7 +101,7 @@ const AddRecord = ({ user }) => {
         if (movieSearchTerm.trim()) {
             const filtered = allMovies.filter(movie =>
                 movie.title?.toLowerCase().includes(movieSearchTerm.toLowerCase())
-            ).slice(0, 10); // Limit to 10 results
+            ); // Removed .slice(0, 10)  
             setMovieResults(filtered);
         } else {
             setMovieResults([]);
@@ -113,7 +113,7 @@ const AddRecord = ({ user }) => {
             const filtered = allPeople.filter(person => {
                 const fullName = `${person.first_name || ''} ${person.last_name || ''}`.trim().toLowerCase();
                 return fullName.includes(personSearchTerm.toLowerCase());
-            }).slice(0, 10); // Limit to 10 results
+            }); // Removed .slice(0, 10)  
             setPersonResults(filtered);
         } else {
             setPersonResults([]);
@@ -124,7 +124,7 @@ const AddRecord = ({ user }) => {
         if (awardSearchTerm.trim()) {
             const filtered = allAwards.filter(award =>
                 award.name?.toLowerCase().includes(awardSearchTerm.toLowerCase())
-            ).slice(0, 10); // Limit to 10 results
+            ); // Removed .slice(0, 10)  
             setAwardResults(filtered);
         } else {
             setAwardResults([]);
@@ -135,7 +135,7 @@ const AddRecord = ({ user }) => {
         if (genreSearchTerm.trim()) {
             const filtered = allGenres.filter(genre =>
                 genre.name?.toLowerCase().includes(genreSearchTerm.toLowerCase())
-            ).slice(0, 10); // Limit to 10 results
+            ); // Removed .slice(0, 10)  
             setGenreResults(filtered);
         } else {
             setGenreResults([]);
@@ -386,6 +386,16 @@ const AddRecord = ({ user }) => {
             setSearchTerm(value);
         };
 
+        const handleSelectItem = (item) => {
+            onSelect(item);
+            setSearchTerm(''); // Clear search term when item is selected  
+        };
+
+        const handleClearSelection = () => {
+            onSelect(null);
+            setSearchTerm(''); // Clear search term when selection is cleared  
+        };
+
         return (
             <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
@@ -396,6 +406,7 @@ const AddRecord = ({ user }) => {
                         onChange={handleInputChange}
                         placeholder={placeholder}
                         className="w-full px-3 py-2 pr-10 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        autoComplete="off"
                     />
                     <div className="absolute right-3 top-2.5 text-gray-400">
                         <Search size={20} />
@@ -407,7 +418,7 @@ const AddRecord = ({ user }) => {
                         <span className="text-green-200">Selected: {renderResult(selected)}</span>
                         <button
                             type="button"
-                            onClick={() => onSelect(null)}
+                            onClick={handleClearSelection}
                             className="text-green-400 hover:text-green-300"
                         >
                             <X size={16} />
@@ -419,9 +430,9 @@ const AddRecord = ({ user }) => {
                     <div className="mt-2 max-h-40 overflow-y-auto bg-gray-700 border border-gray-600 rounded">
                         {results.map((result, index) => (
                             <button
-                                key={`${result.movie_id || result.person_id || result.award_id || result.genre_id || ''}-${index}`}
+                                key={`${result.movie_id || result.person_id || result.award_id || result.genre_id || 'item'}-${index}`}
                                 type="button"
-                                onClick={() => onSelect(result)}
+                                onClick={() => handleSelectItem(result)}
                                 className="w-full text-left px-3 py-2 hover:bg-gray-600 border-b border-gray-600 last:border-b-0"
                             >
                                 {renderResult(result)}
