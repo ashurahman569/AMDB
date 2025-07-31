@@ -62,9 +62,6 @@ const App = () => {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('token');
-      if (showAlert) {
-        alert('You have logged out successfully.');
-      }
       setUser(null);
     }
   }, []);
