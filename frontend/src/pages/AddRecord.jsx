@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Film, User, Award, Tag, Users, FileText,
@@ -6,6 +6,82 @@ import {
 } from 'lucide-react';
 
 const BASE_URL = 'http://localhost:5000/api';
+
+// Extract SearchField component outside to prevent re-creation
+const SearchField = React.memo(({
+    label,
+    searchTerm,
+    setSearchTerm,
+    results,
+    onSelect,
+    selected,
+    renderResult,
+    placeholder
+}) => {
+    const handleInputChange = useCallback((e) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+    }, [setSearchTerm]);
+
+    const handleSelectItem = useCallback((item) => {
+        onSelect(item);
+        setSearchTerm('');
+    }, [onSelect, setSearchTerm]);
+
+    const handleClearSelection = useCallback(() => {
+        onSelect(null);
+        setSearchTerm('');
+    }, [onSelect, setSearchTerm]);
+
+    return (
+        <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+            <div className="relative">
+                <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={handleInputChange}
+                    placeholder={placeholder}
+                    className="w-full px-3 py-2 pr-10 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    autoComplete="off"
+                />
+                <div className="absolute right-3 top-2.5 text-gray-400">
+                    <Search size={20} />
+                </div>
+            </div>
+
+            {selected && (
+                <div className="mt-2 p-2 bg-green-900 border border-green-600 rounded flex items-center justify-between">
+                    <span className="text-green-200">Selected: {renderResult(selected)}</span>
+                    <button
+                        type="button"
+                        onClick={handleClearSelection}
+                        className="text-green-400 hover:text-green-300"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
+
+            {results.length > 0 && !selected && (
+                <div className="mt-2 max-h-40 overflow-y-auto bg-gray-700 border border-gray-600 rounded">
+                    {results.map((result, index) => (
+                        <button
+                            key={`${result.movie_id || result.person_id || result.award_id || result.genre_id || 'item'}-${index}`}
+                            type="button"
+                            onClick={() => handleSelectItem(result)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-600 border-b border-gray-600 last:border-b-0"
+                        >
+                            {renderResult(result)}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+
+SearchField.displayName = 'SearchField';
 
 const AddRecord = ({ user }) => {
     const navigate = useNavigate();
@@ -26,12 +102,6 @@ const AddRecord = ({ user }) => {
     const [allAwards, setAllAwards] = useState([]);
     const [allGenres, setAllGenres] = useState([]);
 
-    // Filtered results for dropdowns
-    const [movieResults, setMovieResults] = useState([]);
-    const [personResults, setPersonResults] = useState([]);
-    const [awardResults, setAwardResults] = useState([]);
-    const [genreResults, setGenreResults] = useState([]);
-
     // Selected items  
     const [selectedMovie, setSelectedMovie] = useState(null);
     const [selectedPerson, setSelectedPerson] = useState(null);
@@ -40,6 +110,36 @@ const AddRecord = ({ user }) => {
 
     // Form data for different modals  
     const [formData, setFormData] = useState({});
+
+    // Memoized filtered results to prevent unnecessary re-computations
+    const movieResults = useMemo(() => {
+        if (!movieSearchTerm.trim()) return [];
+        return allMovies.filter(movie =>
+            movie.title?.toLowerCase().includes(movieSearchTerm.toLowerCase())
+        );
+    }, [movieSearchTerm, allMovies]);
+
+    const personResults = useMemo(() => {
+        if (!personSearchTerm.trim()) return [];
+        return allPeople.filter(person => {
+            const fullName = `${person.first_name || ''} ${person.last_name || ''}`.trim().toLowerCase();
+            return fullName.includes(personSearchTerm.toLowerCase());
+        });
+    }, [personSearchTerm, allPeople]);
+
+    const awardResults = useMemo(() => {
+        if (!awardSearchTerm.trim()) return [];
+        return allAwards.filter(award =>
+            award.name?.toLowerCase().includes(awardSearchTerm.toLowerCase())
+        );
+    }, [awardSearchTerm, allAwards]);
+
+    const genreResults = useMemo(() => {
+        if (!genreSearchTerm.trim()) return [];
+        return allGenres.filter(genre =>
+            genre.name?.toLowerCase().includes(genreSearchTerm.toLowerCase())
+        );
+    }, [genreSearchTerm, allGenres]);
 
     useEffect(() => {
         if (!user) {
@@ -96,53 +196,7 @@ const AddRecord = ({ user }) => {
         }
     };
 
-    // Filter functions based on search terms
-    useEffect(() => {
-        if (movieSearchTerm.trim()) {
-            const filtered = allMovies.filter(movie =>
-                movie.title?.toLowerCase().includes(movieSearchTerm.toLowerCase())
-            ); // Removed .slice(0, 10)  
-            setMovieResults(filtered);
-        } else {
-            setMovieResults([]);
-        }
-    }, [movieSearchTerm, allMovies]);
-
-    useEffect(() => {
-        if (personSearchTerm.trim()) {
-            const filtered = allPeople.filter(person => {
-                const fullName = `${person.first_name || ''} ${person.last_name || ''}`.trim().toLowerCase();
-                return fullName.includes(personSearchTerm.toLowerCase());
-            }); // Removed .slice(0, 10)  
-            setPersonResults(filtered);
-        } else {
-            setPersonResults([]);
-        }
-    }, [personSearchTerm, allPeople]);
-
-    useEffect(() => {
-        if (awardSearchTerm.trim()) {
-            const filtered = allAwards.filter(award =>
-                award.name?.toLowerCase().includes(awardSearchTerm.toLowerCase())
-            ); // Removed .slice(0, 10)  
-            setAwardResults(filtered);
-        } else {
-            setAwardResults([]);
-        }
-    }, [awardSearchTerm, allAwards]);
-
-    useEffect(() => {
-        if (genreSearchTerm.trim()) {
-            const filtered = allGenres.filter(genre =>
-                genre.name?.toLowerCase().includes(genreSearchTerm.toLowerCase())
-            ); // Removed .slice(0, 10)  
-            setGenreResults(filtered);
-        } else {
-            setGenreResults([]);
-        }
-    }, [genreSearchTerm, allGenres]);
-
-    const resetModal = () => {
+    const resetModal = useCallback(() => {
         setActiveModal(null);
         setError('');
         setSuccess('');
@@ -155,11 +209,7 @@ const AddRecord = ({ user }) => {
         setPersonSearchTerm('');
         setAwardSearchTerm('');
         setGenreSearchTerm('');
-        setMovieResults([]);
-        setPersonResults([]);
-        setAwardResults([]);
-        setGenreResults([]);
-    };
+    }, []);
 
     // Submit functions  
     const handleSubmit = async (endpoint, data) => {
@@ -370,79 +420,6 @@ const AddRecord = ({ user }) => {
         { id: 'awardActor', title: 'Add Award Winning Actor', icon: User, color: 'teal', action: () => setActiveModal('awardActor') },
         { id: 'awardDirector', title: 'Add Award Winning Director', icon: FileText, color: 'lime', action: () => setActiveModal('awardDirector') }
     ];
-
-    const SearchField = ({
-        label,
-        searchTerm,
-        setSearchTerm,
-        results,
-        onSelect,
-        selected,
-        renderResult,
-        placeholder
-    }) => {
-        const handleInputChange = (e) => {
-            const value = e.target.value;
-            setSearchTerm(value);
-        };
-
-        const handleSelectItem = (item) => {
-            onSelect(item);
-            setSearchTerm(''); // Clear search term when item is selected  
-        };
-
-        const handleClearSelection = () => {
-            onSelect(null);
-            setSearchTerm(''); // Clear search term when selection is cleared  
-        };
-
-        return (
-            <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-                <div className="relative">
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={handleInputChange}
-                        placeholder={placeholder}
-                        className="w-full px-3 py-2 pr-10 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        autoComplete="off"
-                    />
-                    <div className="absolute right-3 top-2.5 text-gray-400">
-                        <Search size={20} />
-                    </div>
-                </div>
-
-                {selected && (
-                    <div className="mt-2 p-2 bg-green-900 border border-green-600 rounded flex items-center justify-between">
-                        <span className="text-green-200">Selected: {renderResult(selected)}</span>
-                        <button
-                            type="button"
-                            onClick={handleClearSelection}
-                            className="text-green-400 hover:text-green-300"
-                        >
-                            <X size={16} />
-                        </button>
-                    </div>
-                )}
-
-                {results.length > 0 && !selected && (
-                    <div className="mt-2 max-h-40 overflow-y-auto bg-gray-700 border border-gray-600 rounded">
-                        {results.map((result, index) => (
-                            <button
-                                key={`${result.movie_id || result.person_id || result.award_id || result.genre_id || 'item'}-${index}`}
-                                type="button"
-                                onClick={() => handleSelectItem(result)}
-                                className="w-full text-left px-3 py-2 hover:bg-gray-600 border-b border-gray-600 last:border-b-0"
-                            >
-                                {renderResult(result)}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
-    };
 
     return (
         <div className="min-h-screen bg-gray-900 text-white">
@@ -862,7 +839,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult={(movie) => `${movie.title} (${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'})`}
+                                        renderResult={(movie) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -873,7 +855,13 @@ const AddRecord = ({ user }) => {
                                         results={personResults}
                                         onSelect={setSelectedPerson}
                                         selected={selectedPerson}
-                                        renderResult={(person) => `${person.first_name || ''} ${person.last_name || ''}`.trim()}
+                                        renderResult = {(person) => (
+    <div className="flex justify-between items-center">
+        <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
+        <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
+    </div>
+)}
+
                                         placeholder="Search for a person..."
                                     />
 
@@ -917,7 +905,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult={(movie) => `${movie.title} (${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'})`}
+                                        renderResult = {(movie) => (
+    <div className="flex justify-between items-center">
+        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+    </div>
+)}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -928,7 +921,13 @@ const AddRecord = ({ user }) => {
                                         results={personResults}
                                         onSelect={setSelectedPerson}
                                         selected={selectedPerson}
-                                        renderResult={(person) => `${person.first_name || ''} ${person.last_name || ''}`.trim()}
+                                        renderResult = {(person) => (
+    <div className="flex justify-between items-center">
+        <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
+        <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
+    </div>
+)}
+
                                         placeholder="Search for a person..."
                                     />
 
@@ -961,7 +960,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult={(movie) => `${movie.title} (${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'})`}
+                                        renderResult = {(movie) => (
+    <div className="flex justify-between items-center">
+        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+    </div>
+)}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -972,7 +976,13 @@ const AddRecord = ({ user }) => {
                                         results={personResults}
                                         onSelect={setSelectedPerson}
                                         selected={selectedPerson}
-                                        renderResult={(person) => `${person.first_name || ''} ${person.last_name || ''}`.trim()}
+                                        renderResult = {(person) => (
+    <div className="flex justify-between items-center">
+        <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
+        <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
+    </div>
+)}
+
                                         placeholder="Search for a person..."
                                     />
 
@@ -1005,7 +1015,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult={(movie) => `${movie.title} (${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'})`}
+                                        renderResult = {(movie) => (
+    <div className="flex justify-between items-center">
+        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+    </div>
+)}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -1016,7 +1031,12 @@ const AddRecord = ({ user }) => {
                                         results={genreResults}
                                         onSelect={setSelectedGenre}
                                         selected={selectedGenre}
-                                        renderResult={(genre) => genre.name}
+                                        renderResult = {(genre) => (
+    <div className="flex justify-between items-center">
+        <span>{genre.name}</span>
+        <span className="text-xs text-gray-400 ml-2">Genre ID: {genre.genre_id}</span>
+    </div>
+)}
                                         placeholder="Search for a genre..."
                                     />
 
@@ -1049,7 +1069,12 @@ const AddRecord = ({ user }) => {
                                         results={awardResults}
                                         onSelect={setSelectedAward}
                                         selected={selectedAward}
-                                        renderResult={(award) => `${award.name} (${award.year || 'N/A'})`}
+                                        renderResult = {(award) => (
+    <div className="flex justify-between items-center">
+        <span>{award.name} {award.year ? `(${award.year})` : ''}</span>
+        <span className="text-xs text-gray-400 ml-2">Award ID: {award.award_id}</span>
+    </div>
+)}
                                         placeholder="Search for an award..."
                                     />
 
@@ -1060,7 +1085,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult={(movie) => `${movie.title} (${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'})`}
+                                        renderResult = {(movie) => (
+    <div className="flex justify-between items-center">
+        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+    </div>
+)}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -1104,7 +1134,12 @@ const AddRecord = ({ user }) => {
                                         results={awardResults}
                                         onSelect={setSelectedAward}
                                         selected={selectedAward}
-                                        renderResult={(award) => `${award.name} (${award.year || 'N/A'})`}
+                                        renderResult = {(award) => (
+    <div className="flex justify-between items-center">
+        <span>{award.name} {award.year ? `(${award.year})` : ''}</span>
+        <span className="text-xs text-gray-400 ml-2">Award ID: {award.award_id}</span>
+    </div>
+)}
                                         placeholder="Search for an award..."
                                     />
 
@@ -1115,7 +1150,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult={(movie) => `${movie.title} (${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'})`}
+                                        renderResult = {(movie) => (
+    <div className="flex justify-between items-center">
+        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+    </div>
+)}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -1126,7 +1166,13 @@ const AddRecord = ({ user }) => {
                                         results={personResults}
                                         onSelect={setSelectedPerson}
                                         selected={selectedPerson}
-                                        renderResult={(person) => `${person.first_name || ''} ${person.last_name || ''}`.trim()}
+                                        renderResult = {(person) => (
+    <div className="flex justify-between items-center">
+        <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
+        <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
+    </div>
+)}
+
                                         placeholder="Search for a person..."
                                     />
 
@@ -1170,7 +1216,12 @@ const AddRecord = ({ user }) => {
                                         results={awardResults}
                                         onSelect={setSelectedAward}
                                         selected={selectedAward}
-                                        renderResult={(award) => `${award.name} (${award.year || 'N/A'})`}
+                                        renderResult = {(award) => (
+    <div className="flex justify-between items-center">
+        <span>{award.name} {award.year ? `(${award.year})` : ''}</span>
+        <span className="text-xs text-gray-400 ml-2">Award ID: {award.award_id}</span>
+    </div>
+)}
                                         placeholder="Search for an award..."
                                     />
 
@@ -1181,7 +1232,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult={(movie) => `${movie.title} (${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'})`}
+                                        renderResult = {(movie) => (
+    <div className="flex justify-between items-center">
+        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+    </div>
+)}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -1192,7 +1248,13 @@ const AddRecord = ({ user }) => {
                                         results={personResults}
                                         onSelect={setSelectedPerson}
                                         selected={selectedPerson}
-                                        renderResult={(person) => `${person.first_name || ''} ${person.last_name || ''}`.trim()}
+                                        renderResult = {(person) => (
+    <div className="flex justify-between items-center">
+        <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
+        <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
+    </div>
+)}
+
                                         placeholder="Search for a person..."
                                     />
 
