@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Star, MoreHorizontal, Edit2, Trash2, UserX, X } from 'lucide-react';
+import { Star, MoreHorizontal, Edit2, Trash2, UserX, X, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBanModal, setShowBanModal] = useState(false);
+  const [notification, setNotification] = useState(null);
   const dropdownRef = useRef(null);
 
   // Edit review states
@@ -35,12 +36,23 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
     };
   }, [showDropdown]);
 
+  // Auto-hide notifications
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
   if (!review) return null;
+
+  // Show notification
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+  };
 
   // Check if user can see options
   const isReviewAuthor = user && user.id === review.user_id;
-
-  // Updated moderation logic based on requirements:
   const isHeadAdmin = user && user.user_type === 'headadmin';
   const isAdmin = user && user.user_type === 'admin';
   const isModerator = user && user.user_type === 'moderator';
@@ -48,17 +60,14 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
   let canModerate = false;
   let canBan = false;
 
-  if (!isReviewAuthor) { // Only apply moderation if it's not the user's own review
+  if (!isReviewAuthor) {
     if (isHeadAdmin) {
-      // HeadAdmin can moderate everyone (admin, moderator, regular)
       canModerate = true;
-      canBan = review.user_type !== 'admin'; // HeadAdmin can ban moderators and regular users, but not admins
+      canBan = review.user_type !== 'admin';
     } else if (isAdmin) {
-      // Admin can moderate moderators and regular users (but not other admins or headadmins)
       canModerate = review.user_type === 'moderator' || review.user_type === 'regular';
       canBan = review.user_type === 'moderator' || review.user_type === 'regular';
     } else if (isModerator) {
-      // Moderator can moderate regular users only
       canModerate = review.user_type === 'regular';
       canBan = review.user_type === 'regular';
     }
@@ -69,32 +78,61 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
   // Format the timestamp to a readable date
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    
     return date.toLocaleDateString('en-US', {
-      month: 'numeric',
+      month: 'short',
       day: 'numeric',
-      year: '2-digit'
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     });
   };
 
-  // Generate star rating display
-  const renderStars = (rating) => {
-    const starRating = rating;
-    const fullStars = Math.floor(starRating);
-    const emptyStars = 10 - fullStars;
+  // Generate star rating display with animation
+  const renderStars = (rating, interactive = false, onRatingChange = null) => {
+    const [hoverRating, setHoverRating] = useState(0);
+    const starRating = Math.min(Math.max(rating, 0), 10);
 
     return (
-      <div className="flex items-center gap-1">
-        {[...Array(fullStars)].map((_, i) => (
-          <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-        ))}
-        {[...Array(emptyStars)].map((_, i) => (
-          <Star key={i} className="w-3 h-3 text-gray-300" />
-        ))}
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
+          const isActive = star <= (interactive ? (hoverRating || starRating) : starRating);
+          return (
+            <button
+              key={star}
+              type="button"
+              disabled={!interactive}
+              className={`transition-all duration-200 ${
+                interactive 
+                  ? 'hover:scale-110 cursor-pointer' 
+                  : 'cursor-default'
+              } ${isActive ? 'text-amber-400' : 'text-slate-600'}`}
+              onClick={() => interactive && onRatingChange && onRatingChange(star)}
+              onMouseEnter={() => interactive && setHoverRating(star)}
+              onMouseLeave={() => interactive && setHoverRating(0)}
+            >
+              <Star 
+                size={interactive ? 18 : 14} 
+                fill={isActive ? 'currentColor' : 'none'}
+                className="drop-shadow-sm"
+              />
+            </button>
+          );
+        })}
+        {!interactive && (
+          <span className="ml-2 text-xs font-medium text-slate-400">
+            {starRating}/10
+          </span>
+        )}
       </div>
     );
   };
 
-  // Get user initials for avatar
+  // Get user initials for avatar with better color generation
   const getUserInitials = (name) => {
     return name
       .split(' ')
@@ -104,35 +142,23 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
       .slice(0, 2);
   };
 
-  // Star rating component for editing
-  const StarRating = ({ rating, onRatingChange }) => {
-    const [hoverRating, setHoverRating] = useState(0);
-
-    return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
-          <button
-            key={star}
-            type="button"
-            className={`text-xl transition-colors ${star <= (hoverRating || rating)
-              ? 'text-yellow-400'
-              : 'text-gray-400'
-              } hover:text-yellow-400`}
-            onClick={() => onRatingChange(star)}
-            onMouseEnter={() => setHoverRating(star)}
-            onMouseLeave={() => setHoverRating(0)}
-          >
-            <Star size={20} fill={star <= (hoverRating || rating) ? 'currentColor' : 'none'} />
-          </button>
-        ))}
-      </div>
-    );
+  const getAvatarColor = (name) => {
+    const colors = [
+      'bg-gradient-to-br from-purple-500 to-pink-500',
+      'bg-gradient-to-br from-blue-500 to-cyan-500',
+      'bg-gradient-to-br from-green-500 to-emerald-500',
+      'bg-gradient-to-br from-orange-500 to-red-500',
+      'bg-gradient-to-br from-indigo-500 to-purple-500',
+      'bg-gradient-to-br from-teal-500 to-green-500'
+    ];
+    const hash = name.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+    return colors[hash % colors.length];
   };
 
-  // Handle edit review
+  // Handle edit review with better error handling
   const handleEditReview = async () => {
     if (editRating === 0) {
-      alert('Please select a rating');
+      showNotification('Please select a rating', 'error');
       return;
     }
 
@@ -153,18 +179,18 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
 
       if (response.ok) {
         const updatedReview = await response.json();
-        alert('Review updated successfully!');
+        showNotification('Review updated successfully!');
         setShowEditModal(false);
         if (onReviewUpdate) {
           onReviewUpdate(updatedReview);
         }
       } else {
         const errorData = await response.json();
-        alert(errorData.error || 'Failed to update review');
+        showNotification(errorData.error || 'Failed to update review', 'error');
       }
     } catch (error) {
       console.error('Error updating review:', error);
-      alert('An error occurred. Please try again.');
+      showNotification('Network error. Please try again.', 'error');
     } finally {
       setIsUpdating(false);
     }
@@ -183,18 +209,18 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
       });
 
       if (response.ok) {
-        alert('Review deleted successfully!');
+        showNotification('Review deleted successfully!');
         setShowDeleteModal(false);
         if (onReviewDelete) {
           onReviewDelete(review.review_id);
         }
       } else {
         const errorData = await response.json();
-        alert(errorData.error || 'Failed to delete review');
+        showNotification(errorData.error || 'Failed to delete review', 'error');
       }
     } catch (error) {
       console.error('Error deleting review:', error);
-      alert('An error occurred. Please try again.');
+      showNotification('Network error. Please try again.', 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -203,14 +229,10 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
   // Handle ban user
   const handleBanUser = async () => {
     if (!banReason.trim()) {
-      alert('Please provide a reason for the ban');
+      showNotification('Please provide a reason for the ban', 'error');
       return;
     }
-    console.log('Banning user with data:', {
-      user_id: review.user_id,
-      ban_reason: banReason.trim(),
-      user: user // Check if user object is properly structured
-    });
+
     setIsBanning(true);
     try {
       const token = localStorage.getItem('token');
@@ -228,20 +250,19 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
       });
 
       if (response.ok) {
-        alert('User banned successfully!');
+        showNotification('User banned successfully!');
         setShowBanModal(false);
         setBanReason('');
-        // Optionally refresh the page or remove the review
         if (onReviewDelete) {
           onReviewDelete(review.review_id);
         }
       } else {
         const errorData = await response.json();
-        alert(errorData.error || 'Failed to ban user');
+        showNotification(errorData.error || 'Failed to ban user', 'error');
       }
     } catch (error) {
       console.error('Error banning user:', error);
-      alert('An error occurred. Please try again.');
+      showNotification('Network error. Please try again.', 'error');
     } finally {
       setIsBanning(false);
     }
@@ -249,147 +270,187 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
 
   return (
     <>
-      <div className="flex items-start gap-3 py-4 border-b border-gray-700 last:border-b-0">
-        {/* User Avatar */}
-        <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-xs font-medium">
-            {getUserInitials(review.user_name)}
-          </span>
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg shadow-2xl border backdrop-blur-sm animate-in slide-in-from-top-2 duration-300 ${
+          notification.type === 'error' 
+            ? 'bg-red-900/90 border-red-700 text-red-100' 
+            : 'bg-emerald-900/90 border-emerald-700 text-emerald-100'
+        }`}>
+          <div className="flex items-center gap-2">
+            {notification.type === 'error' ? (
+              <AlertTriangle size={16} />
+            ) : (
+              <CheckCircle size={16} />
+            )}
+            <span className="text-sm font-medium">{notification.message}</span>
+          </div>
         </div>
+      )}
 
-        {/* Review Content */}
-        <div className="flex-1 min-w-0">
-          {/* Header with name and more options */}
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-m font-bold text-white">
-              {review.user_name}
+      <div className="group relative bg-gradient-to-br from-slate-900/50 to-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-900/20 hover:border-slate-600/50 hover:-translate-y-0.5">
+        {/* Subtle glow effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        
+        <div className="relative flex items-start gap-4">
+          {/* Enhanced User Avatar */}
+          <div className={`w-12 h-12 ${getAvatarColor(review.user_name)} rounded-full flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white/10 transition-transform duration-300 group-hover:scale-105`}>
+            <span className="text-white text-sm font-bold tracking-wide">
+              {getUserInitials(review.user_name)}
             </span>
-            {showOptions && (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  className="text-gray-400 hover:text-gray-300 p-1 transition-colors"
-                  onClick={() => setShowDropdown(!showDropdown)}
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
+          </div>
 
-                {showDropdown && (
-                  <div className="absolute right-0 top-8 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10 min-w-[120px]">
-                    {/* Edit option - only for review author */}
-                    {isReviewAuthor && (
-                      <button
-                        className="w-full px-3 py-2 text-left text-white hover:bg-gray-700 flex items-center gap-2 text-sm"
-                        onClick={() => {
-                          setShowEditModal(true);
-                          setShowDropdown(false);
-                        }}
-                      >
-                        <Edit2 className="w-3 h-3" />
-                        Edit
-                      </button>
-                    )}
-
-                    {/* Delete option - for review author or moderators */}
-                    {(isReviewAuthor || canModerate) && (
-                      <button
-                        className="w-full px-3 py-2 text-left text-red-400 hover:bg-gray-700 flex items-center gap-2 text-sm"
-                        onClick={() => {
-                          setShowDeleteModal(true);
-                          setShowDropdown(false);
-                        }}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Delete
-                      </button>
-                    )}
-
-                    {/* Ban option - only for moderators with ban permissions */}
-                    {canBan && (
-                      <button
-                        className="w-full px-3 py-2 text-left text-orange-400 hover:bg-gray-700 flex items-center gap-2 text-sm border-t border-gray-600"
-                        onClick={() => {
-                          setShowBanModal(true);
-                          setShowDropdown(false);
-                        }}
-                      >
-                        <UserX className="w-3 h-3" />
-                        Ban User
-                      </button>
-                    )}
-                  </div>
+          {/* Review Content */}
+          <div className="flex-1 min-w-0">
+            {/* Header with enhanced styling */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-bold text-white">
+                  {review.user_name}
+                </span>
+                {(isHeadAdmin || isAdmin || isModerator) && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    review.user_type === 'headadmin' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                    review.user_type === 'admin' ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' :
+                    review.user_type === 'moderator' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                    'bg-slate-500/20 text-slate-300 border border-slate-500/30'
+                  }`}>
+                    {review.user_type}
+                  </span>
                 )}
+              </div>
+              
+              {showOptions && (
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    className="text-slate-400 hover:text-white p-2 rounded-lg transition-all duration-200 hover:bg-slate-700/50"
+                    onClick={() => setShowDropdown(!showDropdown)}
+                  >
+                    <MoreHorizontal className="w-5 h-5" />
+                  </button>
+
+                  {showDropdown && (
+                    <div className="absolute right-0 top-12 bg-slate-800/95 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-2xl z-20 min-w-[140px] animate-in slide-in-from-top-2 duration-200">
+                      {isReviewAuthor && (
+                        <button
+                          className="w-full px-4 py-3 text-left text-white hover:bg-slate-700/50 flex items-center gap-3 text-sm transition-colors rounded-t-xl"
+                          onClick={() => {
+                            setShowEditModal(true);
+                            setShowDropdown(false);
+                          }}
+                        >
+                          <Edit2 className="w-4 h-4 text-blue-400" />
+                          Edit
+                        </button>
+                      )}
+
+                      {(isReviewAuthor || canModerate) && (
+                        <button
+                          className="w-full px-4 py-3 text-left text-red-300 hover:bg-slate-700/50 flex items-center gap-3 text-sm transition-colors border-t border-slate-600/30"
+                          onClick={() => {
+                            setShowDeleteModal(true);
+                            setShowDropdown(false);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      )}
+
+                      {canBan && (
+                        <button
+                          className="w-full px-4 py-3 text-left text-orange-300 hover:bg-slate-700/50 flex items-center gap-3 text-sm border-t border-slate-600/30 transition-colors rounded-b-xl"
+                          onClick={() => {
+                            setShowBanModal(true);
+                            setShowDropdown(false);
+                          }}
+                        >
+                          <UserX className="w-4 h-4" />
+                          Ban User
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Stars and Date with enhanced styling */}
+            <div className="flex items-center gap-4 mb-4">
+              {review.rating && renderStars(review.rating)}
+              <span className="text-sm text-slate-400 font-medium">
+                {formatDate(review.created_at)}
+              </span>
+            </div>
+
+            {/* Review Text with enhanced typography */}
+            {review.review_text && (
+              <div className="prose prose-invert max-w-none">
+                <p className="text-slate-200 leading-relaxed text-base">
+                  {review.review_text}
+                </p>
               </div>
             )}
           </div>
-
-          {/* Stars and Date */}
-          <div className="flex items-center gap-2 mb-2">
-            {review.rating && renderStars(review.rating)}
-            <span className="text-xs text-gray-500">
-              {formatDate(review.created_at)}
-            </span>
-          </div>
-
-          {/* Review Text */}
-          {review.review_text && (
-            <p className="text-m text-white leading-relaxed">
-              {review.review_text}
-            </p>
-          )}
         </div>
       </div>
 
-      {/* Edit Modal - Fixed positioning */}
+      {/* Enhanced Edit Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-white">Edit Review</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-white">Edit Review</h3>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-700/50"
               >
                 <X size={24} />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <label className="block text-white mb-2">Your Rating:</label>
-                <StarRating
-                  rating={editRating}
-                  onRatingChange={setEditRating}
-                />
-                <p className="text-sm text-gray-400 mt-1">Click on a star to rate (1-10)</p>
+                <label className="block text-white font-medium mb-3">Your Rating</label>
+                {renderStars(editRating, true, setEditRating)}
+                <p className="text-sm text-slate-400 mt-2">Click on a star to rate (1-10)</p>
               </div>
 
               <div>
-                <label className="block text-white mb-2">Review Text:</label>
+                <label className="block text-white font-medium mb-3">Review Text</label>
                 <textarea
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
                   placeholder="Share your thoughts about this movie..."
-                  className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-yellow-400 focus:outline-none resize-none"
+                  className="w-full p-4 bg-slate-800/50 backdrop-blur-sm text-white rounded-xl border border-slate-600/50 focus:border-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-400/20 resize-none transition-all duration-200"
                   rows={4}
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-4 pt-4">
                 <button
                   onClick={() => setShowEditModal(false)}
-                  className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  className="flex-1 px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-white rounded-xl transition-all duration-200 font-medium border border-slate-600/30"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleEditReview}
                   disabled={isUpdating || editRating === 0}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${isUpdating || editRating === 0
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                    : 'bg-yellow-400 hover:bg-yellow-500 text-gray-900'
-                    }`}
+                  className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    isUpdating || editRating === 0
+                      ? 'bg-slate-600/50 text-slate-400 cursor-not-allowed border border-slate-600/30'
+                      : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
+                  }`}
                 >
-                  {isUpdating ? 'Updating...' : 'Update Review'}
+                  {isUpdating ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Updating...
+                    </div>
+                  ) : (
+                    'Update Review'
+                  )}
                 </button>
               </div>
             </div>
@@ -397,92 +458,118 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal - Fixed positioning */}
+      {/* Enhanced Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-white">Delete Review</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-white">Delete Review</h3>
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-700/50"
               >
                 <X size={24} />
               </button>
             </div>
 
-            <p className="text-white mb-6">
-              Are you sure you want to delete this review? This action cannot be undone.
-            </p>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+              </div>
+              <p className="text-slate-200 leading-relaxed">
+                Are you sure you want to delete this review? This action cannot be undone.
+              </p>
+            </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                className="flex-1 px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-white rounded-xl transition-all duration-200 font-medium border border-slate-600/30"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteReview}
                 disabled={isDeleting}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${isDeleting
-                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                  : 'bg-red-600 hover:bg-red-700 text-white'
-                  }`}
+                className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  isDeleting
+                    ? 'bg-slate-600/50 text-slate-400 cursor-not-allowed border border-slate-600/30'
+                    : 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
+                }`}
               >
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {isDeleting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Deleting...
+                  </div>
+                ) : (
+                  'Delete'
+                )}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Ban User Modal - Fixed positioning */}
+      {/* Enhanced Ban User Modal */}
       {showBanModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-white">Ban User</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-white">Ban User</h3>
               <button
                 onClick={() => setShowBanModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-700/50"
               >
                 <X size={24} />
               </button>
             </div>
 
-            <p className="text-white mb-4">
-              Are you sure you want to ban <strong>{review.user_name}</strong>? This will permanently ban the user from the platform.
-            </p>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-orange-500/20 rounded-full flex items-center justify-center">
+                <UserX className="w-6 h-6 text-orange-400" />
+              </div>
+              <p className="text-slate-200">
+                Are you sure you want to ban <strong className="text-white">{review.user_name}</strong>? This will permanently ban the user from the platform.
+              </p>
+            </div>
 
             <div className="mb-6">
-              <label className="block text-white mb-2">Ban Reason:</label>
+              <label className="block text-white font-medium mb-3">Ban Reason</label>
               <textarea
                 value={banReason}
                 onChange={(e) => setBanReason(e.target.value)}
-                placeholder="Please provide a reason for the ban..."
-                className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-orange-400 focus:outline-none resize-none"
+                placeholder="Please provide a detailed reason for the ban..."
+                className="w-full p-4 bg-slate-800/50 backdrop-blur-sm text-white rounded-xl border border-slate-600/50 focus:border-orange-400/50 focus:outline-none focus:ring-2 focus:ring-orange-400/20 resize-none transition-all duration-200"
                 rows={3}
                 required
               />
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <button
                 onClick={() => setShowBanModal(false)}
-                className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                className="flex-1 px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-white rounded-xl transition-all duration-200 font-medium border border-slate-600/30"
               >
                 Cancel
               </button>
               <button
                 onClick={handleBanUser}
                 disabled={isBanning || !banReason.trim()}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${isBanning || !banReason.trim()
-                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                  : 'bg-orange-600 hover:bg-orange-700 text-white'
-                  }`}
+                className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  isBanning || !banReason.trim()
+                    ? 'bg-slate-600/50 text-slate-400 cursor-not-allowed border border-slate-600/30'
+                    : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
+                }`}
               >
-                {isBanning ? 'Banning...' : 'Ban User'}
+                {isBanning ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Banning...
+                  </div>
+                ) : (
+                  'Ban User'
+                )}
               </button>
             </div>
           </div>

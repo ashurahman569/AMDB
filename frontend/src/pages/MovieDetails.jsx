@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 const BASE_URL = 'http://localhost:5000/api';
 import PersonCard from '../components/cards/PersonCard';
-import { Users, Star, Plus, Heart, X, Award } from 'lucide-react';
+import { Users, Star, Plus, Heart, X, Award, Play, Calendar, Clock, Film, TrendingUp, Eye, ChevronLeft, ChevronRight, CheckCircle, AlertTriangle } from 'lucide-react';
 import ReviewCard from '../components/cards/ReviewCard';
 
 export default function MovieDetailsPage({ user }) {
@@ -21,6 +21,7 @@ export default function MovieDetailsPage({ user }) {
   const [isInFavorites, setIsInFavorites] = useState(false);
   const [isRemovingFromWatchlist, setIsRemovingFromWatchlist] = useState(false);
   const [isRemovingFromFav, setIsRemovingFromFav] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   // Rating modal states
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -28,6 +29,19 @@ export default function MovieDetailsPage({ user }) {
   const [reviewText, setReviewText] = useState('');
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [hasUserReviewed, setHasUserReviewed] = useState(false);
+
+  // Auto-hide notifications
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  // Show notification
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+  };
 
   useEffect(() => {
     async function fetchMovie() {
@@ -110,10 +124,10 @@ export default function MovieDetailsPage({ user }) {
       try {
         const res = await axios.get(`${BASE_URL}/reviews/${id}`);
         console.log("📝 Reviews data:", res.data);
-        setReviews(res.data); // Changed from res.data.data to res.data
+        setReviews(res.data);
       } catch (err) {
         console.error('Failed to fetch reviews:', err);
-        setReviews([]); // Set empty array on error
+        setReviews([]);
       } finally {
         setReviewsLoading(false);
       }
@@ -132,7 +146,7 @@ export default function MovieDetailsPage({ user }) {
         setAwards(res.data.data);
       } catch (err) {
         console.error('Failed to fetch awards:', err);
-        setAwards([]); // Set empty array on error
+        setAwards([]);
       } finally {
         setAwardsLoading(false);
       }
@@ -145,12 +159,12 @@ export default function MovieDetailsPage({ user }) {
   // Handle rating modal open - updated to handle both rate and review buttons
   const handleOpenRatingModal = () => {
     if (!user) {
-      alert('Please sign in to rate this movie');
+      showNotification('Please sign in to rate this movie', 'error');
       return;
     }
 
     if (hasUserReviewed) {
-      alert('You have already reviewed this movie');
+      showNotification('You have already reviewed this movie', 'error');
       return;
     }
 
@@ -201,6 +215,7 @@ export default function MovieDetailsPage({ user }) {
     };
     fetchUpdatedMovie();
   };
+
   // Handle rating modal close
   const handleCloseRatingModal = () => {
     setShowRatingModal(false);
@@ -211,7 +226,7 @@ export default function MovieDetailsPage({ user }) {
   // Handle rating submission
   const handleSubmitRating = async () => {
     if (userRating === 0) {
-      alert('Please select a rating');
+      showNotification('Please select a rating', 'error');
       return;
     }
 
@@ -233,7 +248,7 @@ export default function MovieDetailsPage({ user }) {
       });
 
       if (response.ok) {
-        alert('Rating submitted successfully!');
+        showNotification('Rating submitted successfully!');
         setHasUserReviewed(true);
         handleCloseRatingModal();
 
@@ -246,19 +261,24 @@ export default function MovieDetailsPage({ user }) {
         setMovie(movieRes.data.data);
       } else {
         const errorData = await response.json();
-        alert(errorData.error || 'Failed to submit rating');
+        showNotification(errorData.error || 'Failed to submit rating', 'error');
       }
     } catch (error) {
       console.error('Error submitting rating:', error);
-      alert('An error occurred. Please try again.');
+      showNotification('Network error. Please try again.', 'error');
     } finally {
       setIsSubmittingRating(false);
     }
   };
 
-  // Star rating component
-  const StarRating = ({ rating, onRatingChange, interactive = true }) => {
+  // Enhanced Star rating component
+  const StarRating = ({ rating, onRatingChange, interactive = true, size = 'md' }) => {
     const [hoverRating, setHoverRating] = useState(0);
+    const sizeClasses = {
+      sm: 'w-4 h-4',
+      md: 'w-6 h-6',
+      lg: 'w-8 h-8'
+    };
 
     return (
       <div className="flex gap-1">
@@ -266,25 +286,57 @@ export default function MovieDetailsPage({ user }) {
           <button
             key={star}
             type="button"
-            className={`text-2xl transition-colors ${star <= (hoverRating || rating)
-              ? 'text-yellow-400'
-              : 'text-gray-400'
-              } ${interactive ? 'hover:text-yellow-400' : ''}`}
-            onClick={() => interactive && onRatingChange(star)}
+            className={`transition-all duration-200 ${interactive
+                ? 'hover:scale-110 cursor-pointer'
+                : 'cursor-default'
+              } ${star <= (hoverRating || rating) ? 'text-amber-400' : 'text-slate-600'}`}
+            onClick={() => interactive && onRatingChange && onRatingChange(star)}
             onMouseEnter={() => interactive && setHoverRating(star)}
             onMouseLeave={() => interactive && setHoverRating(0)}
             disabled={!interactive}
           >
-            <Star size={24} fill={star <= (hoverRating || rating) ? 'currentColor' : 'none'} />
+            <Star
+              className={`${sizeClasses[size]} drop-shadow-sm`}
+              fill={star <= (hoverRating || rating) ? 'currentColor' : 'none'}
+            />
           </button>
         ))}
       </div>
     );
   };
 
-  if (loading) return <div className="text-center mt-10 text-white">Loading...</div>;
-  if (error) return <div className="text-center text-red-400 mt-10">{error}</div>;
-  if (!movie) return <div className="text-center mt-10 text-white">Movie not found.</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl text-slate-300">Loading movie details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <p className="text-xl text-red-400">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!movie) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <Film className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+          <p className="text-xl text-slate-300">Movie not found.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Helper function to format names from arrays
   const formatPersonNames = (personArray) => {
@@ -297,7 +349,7 @@ export default function MovieDetailsPage({ user }) {
   // Function to add movie to watchlist
   const handleAddToWatchlist = async () => {
     if (!user) {
-      alert('Please sign in to add movies to your watchlist');
+      showNotification('Please sign in to add movies to your watchlist', 'error');
       return;
     }
 
@@ -319,22 +371,19 @@ export default function MovieDetailsPage({ user }) {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Movie added to watchlist successfully!');
+        showNotification('Movie added to watchlist successfully!');
         setIsInWatchlist(true);
       } else {
-        // Handle specific error messages
         if (response.status === 409) {
-          alert('This movie is already in your watchlist');
+          showNotification('This movie is already in your watchlist', 'error');
           setIsInWatchlist(true);
-        } else if (response.status === 400) {
-          alert(data.error || 'Invalid request');
         } else {
-          alert(data.error || 'Failed to add movie to watchlist');
+          showNotification(data.error || 'Failed to add movie to watchlist', 'error');
         }
       }
     } catch (error) {
       console.error('Error adding to watchlist:', error);
-      alert('An error occurred. Please try again.');
+      showNotification('Network error. Please try again.', 'error');
     } finally {
       setIsAddingToWatchlist(false);
     }
@@ -362,14 +411,14 @@ export default function MovieDetailsPage({ user }) {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Movie removed from watchlist successfully!');
+        showNotification('Movie removed from watchlist successfully!');
         setIsInWatchlist(false);
       } else {
-        alert(data.error || 'Failed to remove movie from watchlist');
+        showNotification(data.error || 'Failed to remove movie from watchlist', 'error');
       }
     } catch (error) {
       console.error('Error removing from watchlist:', error);
-      alert('An error occurred. Please try again.');
+      showNotification('Network error. Please try again.', 'error');
     } finally {
       setIsRemovingFromWatchlist(false);
     }
@@ -378,7 +427,7 @@ export default function MovieDetailsPage({ user }) {
   // Function to add movie to favorites
   const handleAddToFavorites = async () => {
     if (!user) {
-      alert('Please sign in to add movies to your favorites');
+      showNotification('Please sign in to add movies to your favorites', 'error');
       return;
     }
 
@@ -400,22 +449,19 @@ export default function MovieDetailsPage({ user }) {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Movie added to favorites successfully!');
+        showNotification('Movie added to favorites successfully!');
         setIsInFavorites(true);
       } else {
-        // Handle specific error messages
         if (response.status === 409) {
-          alert('This movie is already in your favorites');
+          showNotification('This movie is already in your favorites', 'error');
           setIsInFavorites(true);
-        } else if (response.status === 400) {
-          alert(data.error || 'Invalid request');
         } else {
-          alert(data.error || 'Failed to add movie to favorites');
+          showNotification(data.error || 'Failed to add movie to favorites', 'error');
         }
       }
     } catch (error) {
       console.error('Error adding to favorites:', error);
-      alert('An error occurred. Please try again.');
+      showNotification('Network error. Please try again.', 'error');
     } finally {
       setIsAddingToFav(false);
     }
@@ -443,244 +489,334 @@ export default function MovieDetailsPage({ user }) {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Movie removed from favorites successfully!');
+        showNotification('Movie removed from favorites successfully!');
         setIsInFavorites(false);
       } else {
-        alert(data.error || 'Failed to remove movie from favorites');
+        showNotification(data.error || 'Failed to remove movie from favorites', 'error');
       }
     } catch (error) {
       console.error('Error removing from favorites:', error);
-      alert('An error occurred. Please try again.');
+      showNotification('Network error. Please try again.', 'error');
     } finally {
       setIsRemovingFromFav(false);
     }
   };
 
+  const scrollContainer = (containerId, direction) => {
+    const container = document.getElementById(containerId);
+    if (container) {
+      const scrollAmount = direction === 'left' ? -300 : 300;
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div>
-          <img src={movie.poster_url} alt={movie.title} className="rounded-xl shadow-lg w-full" />
-        </div>
-        <div className="md:col-span-2 space-y-4">
-          <h1 className="text-5xl font-bold text-white">{movie.title} ({year})</h1>
-          <h2 className="text-2xl text-white">{movie.about}</h2>
-          <br />
-          <br />
-          <p className="text-white"><strong>Release Date:</strong> {movie.release_date}</p>
-          <p className="text-white"><strong>MPAA Rating:</strong> {movie.mpaa_rating}</p>
-          <p className="text-white"><strong>Runtime:</strong> {movie.runtime} minutes</p>
-          <p className="text-white"><strong>Genres:</strong> {movie.genres}</p>
-          {/* Fixed: Convert directors array to string */}
-          <p className="text-white"><strong>Directed by:</strong> {formatPersonNames(movie.directors)}</p>
-          {/* Fixed: Convert writers array to string */}
-          <p className="text-white"><strong>Written by:</strong> {formatPersonNames(movie.writers)}</p>
-          <p className="text-white"><strong>Box Office:</strong> ${movie.box_office?.toLocaleString()}</p>
-          <p className="text-white"><strong>Average Rating:</strong> {parseFloat(movie.avg_rating).toFixed(1)} / 10 ({movie.review_count} reviews)</p>
-
-          {/* User-specific actions */}
-          {user && (
-            <div className="flex gap-4 mt-6">
-              <button
-                onClick={handleOpenRatingModal}
-                disabled={hasUserReviewed}
-                className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${hasUserReviewed
-                  ? 'bg-green-600 text-gray-300 cursor-not-allowed'
-                  : 'bg-yellow-400 hover:bg-yellow-500 text-gray-900'
-                  }`}
-              >
-                <Star size={18} />
-                {hasUserReviewed ? 'Already Rated' : 'Rate Movie'}
-              </button>
-
-              {/* Watchlist Button */}
-              {isInWatchlist ? (
-                <button
-                  onClick={handleRemoveFromWatchlist}
-                  disabled={isRemovingFromWatchlist}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${isRemovingFromWatchlist
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                    : 'bg-red-600 hover:bg-red-700 text-white'
-                    }`}
-                >
-                  <Plus size={18} className="rotate-45" />
-                  {isRemovingFromWatchlist ? 'Removing...' : 'Remove from Watchlist'}
-                </button>
-              ) : (
-                <button
-                  onClick={handleAddToWatchlist}
-                  disabled={isAddingToWatchlist}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${isAddingToWatchlist
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                    }`}
-                >
-                  <Plus size={18} />
-                  {isAddingToWatchlist ? 'Adding...' : 'Add to Watchlist'}
-                </button>
-              )}
-
-              {/* Favorites Button */}
-              {isInFavorites ? (
-                <button
-                  onClick={handleRemoveFromFavorites}
-                  disabled={isRemovingFromFav}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${isRemovingFromFav
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                    : 'bg-gray-600 hover:bg-gray-700 text-white'
-                    }`}
-                >
-                  <Heart size={18} fill="currentColor" />
-                  {isRemovingFromFav ? 'Removing...' : 'Remove from Favorites'}
-                </button>
-              ) : (
-                <button
-                  onClick={handleAddToFavorites}
-                  disabled={isAddingToFav}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${isAddingToFav
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                    : 'bg-pink-600 hover:bg-pink-700 text-white'
-                    }`}
-                >
-                  <Heart size={18} />
-                  {isAddingToFav ? 'Adding...' : 'Add to Favorites'}
-                </button>
-              )}
-            </div>
-          )}
-
-          {!user && (
-            <div className="mt-6 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-              <p className="text-gray-300">
-                <strong>Sign in</strong> to rate this movie, add it to your watchlist, or mark as favorite.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Rating Modal */}
-      {showRatingModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-white">Rate "{movie.title}"</h3>
-              <button
-                onClick={handleCloseRatingModal}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-white mb-2">Your Rating:</label>
-                <StarRating
-                  rating={userRating}
-                  onRatingChange={setUserRating}
-                  interactive={true}
-                />
-                <p className="text-sm text-gray-400 mt-1">Click on a star to rate (1-10)</p>
-              </div>
-
-              <div>
-                <label className="block text-white mb-2">Write a Review (Optional):</label>
-                <textarea
-                  value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
-                  placeholder="Share your thoughts about this movie..."
-                  className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-yellow-400 focus:outline-none resize-none"
-                  rows={4}
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={handleCloseRatingModal}
-                  className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitRating}
-                  disabled={isSubmittingRating || userRating === 0}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${isSubmittingRating || userRating === 0
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                    : 'bg-yellow-400 hover:bg-yellow-500 text-gray-900'
-                    }`}
-                >
-                  {isSubmittingRating ? 'Submitting...' : 'Submit Rating'}
-                </button>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg shadow-2xl border backdrop-blur-sm animate-in slide-in-from-top-2 duration-300 ${notification.type === 'error'
+            ? 'bg-red-900/90 border-red-700 text-red-100'
+            : 'bg-emerald-900/90 border-emerald-700 text-emerald-100'
+          }`}>
+          <div className="flex items-center gap-2">
+            {notification.type === 'error' ? (
+              <AlertTriangle size={16} />
+            ) : (
+              <CheckCircle size={16} />
+            )}
+            <span className="text-sm font-medium">{notification.message}</span>
           </div>
         </div>
       )}
 
-      <div className="mt-10 space-y-4">
-        <h2 className="text-2xl font-semibold text-white">Plot</h2>
-        <p className="text-white">{movie.plot}</p>
+      {/* Hero Section with Background */}
+      <div className="relative">
+        {/* Background with gradient overlay */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url(${movie.poster_url})`,
+            filter: 'blur(20px) brightness(0.3)',
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
 
-        {movie.trailer_url && (
-          <div className="mt-6">
-            <h2 className="text-2xl font-semibold text-white"><br></br>Trailer</h2>
-            <iframe
-              className="w-full aspect-video rounded-xl mt-2"
-              src={`${movie.trailer_url.replace('watch?v=', 'embed/')}?quality=hd1080&vq=hd1080&hd=1&autoplay=0&rel=0&modestbranding=1`}
-              title="Trailer"
-              width="1280"
-              height="720"
-              frameBorder="0"
-              allowFullScreen
-            ></iframe>
+        {/* Content */}
+        <div className="relative max-w-7xl mx-auto px-6 py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            {/* Movie Poster */}
+            <div className="lg:col-span-1">
+              <div className="group relative">
+                <div className="absolute inset-0 bg-gradient-to-t from-blue-500/20 to-purple-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <img
+                  src={movie.poster_url}
+                  alt={movie.title}
+                  className="w-full rounded-2xl shadow-2xl transition-transform duration-500 group-hover:scale-[1.02] border border-slate-700/50"
+                />
+              </div>
+            </div>
+
+            {/* Movie Info */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Title and Year */}
+              <div>
+                <h1 className="text-4xl lg:text-6xl font-bold text-white mb-2 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+                  {movie.title}
+                </h1>
+                <div className="flex items-center gap-4 text-slate-300 text-lg">
+                  <span className="flex items-center gap-2">
+                    <Calendar size={20} />
+                    {year}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <Clock size={20} />
+                    {movie.runtime} min
+                  </span>
+                  <span className="px-3 py-1 bg-slate-800/50 rounded-full text-sm border border-slate-600/50">
+                    {movie.mpaa_rating}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tagline */}
+              <p className="text-xl text-slate-200 font-medium leading-relaxed">
+                {movie.about}
+              </p>
+
+              {/* Rating and Stats */}
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <StarRating rating={Math.round(parseFloat(movie.avg_rating))} interactive={false} size="md" />
+                  </div>
+                  <div className="text-white">
+                    <span className="text-2xl font-bold">{parseFloat(movie.avg_rating).toFixed(1)}</span>
+                    <span className="text-slate-400 ml-1">/10</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Eye size={18} />
+                  <span>{movie.review_count} reviews</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              {user && (
+                <div className="flex flex-wrap gap-4">
+                  <button
+                    onClick={handleOpenRatingModal}
+                    disabled={hasUserReviewed}
+                    className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 ${hasUserReviewed
+                        ? 'bg-emerald-500/20 text-emerald-300 cursor-not-allowed border border-emerald-500/30'
+                        : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
+                      }`}
+                  >
+                    <Star size={20} />
+                    {hasUserReviewed ? 'Already Rated' : 'Rate Movie'}
+                  </button>
+
+                  {/* Watchlist Button */}
+                  {isInWatchlist ? (
+                    <button
+                      onClick={handleRemoveFromWatchlist}
+                      disabled={isRemovingFromWatchlist}
+                      className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 ${isRemovingFromWatchlist
+                          ? 'bg-slate-600/50 text-slate-400 cursor-not-allowed'
+                          : 'bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 hover:border-red-500/50'
+                        }`}
+                    >
+                      {isRemovingFromWatchlist ? (
+                        <div className="w-5 h-5 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      ) : (
+                        <Plus size={20} className="rotate-45" />
+                      )}
+                      {isRemovingFromWatchlist ? 'Removing...' : 'Remove from Watchlist'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleAddToWatchlist}
+                      disabled={isAddingToWatchlist}
+                      className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 ${isAddingToWatchlist
+                          ? 'bg-slate-600/50 text-slate-400 cursor-not-allowed'
+                          : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 hover:border-blue-500/50'
+                        }`}
+                    >
+                      {isAddingToWatchlist ? (
+                        <div className="w-5 h-5 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      ) : (
+                        <Plus size={20} />
+                      )}
+                      {isAddingToWatchlist ? 'Adding...' : 'Add to Watchlist'}
+                    </button>
+                  )}
+
+                  {/* Favorites Button */}
+                  {isInFavorites ? (
+                    <button
+                      onClick={handleRemoveFromFavorites}
+                      disabled={isRemovingFromFav}
+                      className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 ${isRemovingFromFav
+                          ? 'bg-slate-600/50 text-slate-400 cursor-not-allowed'
+                          : 'bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30 hover:border-pink-500/50'
+                        }`}
+                    >
+                      {isRemovingFromFav ? (
+                        <div className="w-5 h-5 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      ) : (
+                        <Heart size={20} fill="currentColor" />
+                      )}
+                      {isRemovingFromFav ? 'Removing...' : 'Remove from Favorites'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleAddToFavorites}
+                      disabled={isAddingToFav}
+                      className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 ${isAddingToFav
+                          ? 'bg-slate-600/50 text-slate-400 cursor-not-allowed'
+                          : 'bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30 hover:border-pink-500/50'
+                        }`}
+                    >
+                      {isAddingToFav ? (
+                        <div className="w-5 h-5 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      ) : (
+                        <Heart size={20} />
+                      )}
+                      {isAddingToFav ? 'Adding...' : 'Add to Favorites'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {!user && (
+                <div className="p-6 bg-gradient-to-r from-slate-800/50 to-slate-700/30 rounded-2xl border border-slate-600/50 backdrop-blur-sm">
+                  <p className="text-slate-300 text-lg">
+                    <strong className="text-white">Sign in</strong> to rate this movie, add it to your watchlist, or mark as favorite.
+                  </p>
+                </div>
+              )}
+
+              {/* Movie Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="text-blue-400" size={18} />
+                    <span className="text-slate-400">Release Date:</span>
+                    <span className="text-white font-medium">{movie.release_date}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Film className="text-purple-400" size={18} />
+                    <span className="text-slate-400">Genres:</span>
+                    <span className="text-white font-medium">{movie.genres}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Users className="text-green-400" size={18} />
+                    <span className="text-slate-400">Director:</span>
+                    <span className="text-white font-medium">{formatPersonNames(movie.directors)}</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="text-amber-400" size={18} />
+                    <span className="text-slate-400">Box Office:</span>
+                    <span className="text-white font-medium">${movie.box_office?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Users className="text-indigo-400" size={18} />
+                    <span className="text-slate-400">Writers:</span>
+                    <span className="text-white font-medium">{formatPersonNames(movie.writers)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-16">
+        {/* Plot Section */}
+        <section className="bg-gradient-to-br from-slate-900/50 to-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8">
+          <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
+            <Film className="text-blue-400" size={28} />
+            Plot
+          </h2>
+          <p className="text-slate-200 text-lg leading-relaxed">{movie.plot}</p>
+        </section>
+
+        {/* Trailer Section */}
+        {movie.trailer_url && (
+          <section className="bg-gradient-to-br from-slate-900/50 to-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8">
+            <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
+              <Play className="text-red-400" size={28} />
+              Trailer
+            </h2>
+            <div className="relative group">
+              <iframe
+                className="w-full aspect-video rounded-xl shadow-2xl transition-transform duration-300 group-hover:scale-[1.02]"
+                src={`${movie.trailer_url.replace('watch?v=', 'embed/')}?quality=hd1080&vq=hd1080&hd=1&autoplay=0&rel=0&modestbranding=1`}
+                title="Trailer"
+                width="1280"
+                height="720"
+                frameBorder="0"
+                allowFullScreen
+              />
+            </div>
+          </section>
         )}
 
         {/* Directors Section */}
-        <div className="mt-8">
-          <h2 className="text-2xl font-semibold mb-2 text-white"><br></br>Director:</h2>
+        <section className="bg-gradient-to-br from-slate-900/50 to-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8">
+          <h2 className="text-3xl font-bold text-white mb-6">Director</h2>
           <div className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2">
             {movie.directors && movie.directors.length > 0 ? (
               movie.directors.map(person => (
-                <PersonCard key={person.person_id} person={person} />
+                <div key={person.person_id} className="flex-shrink-0">
+                  <PersonCard person={person} />
+                </div>
               ))
             ) : (
-              <p className="text-gray-300">No director information available</p>
+              <p className="text-slate-400">No director information available</p>
             )}
           </div>
-        </div>
+        </section>
 
         {/* Writers Section */}
-        <div className="mt-8">
-          <h2 className="text-2xl font-semibold mb-2 text-white">Scriptwriter:</h2>
+        <section className="bg-gradient-to-br from-slate-900/50 to-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8">
+          <h2 className="text-3xl font-bold text-white mb-6">Scriptwriter</h2>
           <div className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2">
             {movie.writers && movie.writers.length > 0 ? (
               movie.writers.map(person => (
-                <PersonCard key={person.person_id} person={person} />
+                <div key={person.person_id} className="flex-shrink-0">
+                  <PersonCard person={person} />
+                </div>
               ))
             ) : (
-              <p className="text-gray-300">No scriptwriter information available</p>
+              <p className="text-slate-400">No scriptwriter information available</p>
             )}
           </div>
-        </div>
+        </section>
 
         {/* Cast Section */}
-        <div className="mt-8">
-          <h2 className="text-2xl font-semibold mb-2 text-white">Top Cast:</h2>
+        <section className="bg-gradient-to-br from-slate-900/50 to-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8">
+          <h2 className="text-3xl font-bold text-white mb-6">Top Cast</h2>
           <div className="relative group">
-            <div className="flex gap-2 overflow-x-auto scroll-smooth scrollbar-hide pb-2" id="cast-scroll">
+            <div className="flex gap-6 overflow-x-auto scroll-smooth scrollbar-hide pb-2" id="cast-scroll">
               {movie.cast && movie.cast.length > 0 ? (
                 movie.cast.map(person => (
-                  <div key={person.person_id} className="flex flex-col items-center flex-shrink-0">
-                    <PersonCard person={person} />
+                  <div key={person.person_id} className="flex flex-col items-center flex-shrink-0 group">
+                    <div className="transition-transform duration-300 group-hover:scale-105">
+                      <PersonCard person={person} />
+                    </div>
                     {person.character_name && (
-                      <p className="text-m text-yellow-200 mt-1">{person.character_name}</p>
+                      <p className="text-sky-400 mt-3 text-center text-lg max-w-[150px] truncate">
+                        {person.character_name}
+                      </p>
                     )}
                   </div>
                 ))
               ) : (
-                <p className="text-gray-300">No cast information available</p>
+                <p className="text-slate-400">No cast information available</p>
               )}
             </div>
 
@@ -688,105 +824,193 @@ export default function MovieDetailsPage({ user }) {
             {movie.cast && movie.cast.length > 5 && (
               <>
                 <button
-                  className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  onClick={() => {
-                    const container = document.getElementById('cast-scroll');
-                    container.scrollBy({ left: -300, behavior: 'smooth' });
-                  }}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 z-10 backdrop-blur-sm border border-slate-600/50"
+                  onClick={() => scrollContainer('cast-scroll', 'left')}
                 >
-                  ←
+                  <ChevronLeft size={20} />
                 </button>
                 <button
-                  className="absolute right-0 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  onClick={() => {
-                    const container = document.getElementById('cast-scroll');
-                    container.scrollBy({ left: 300, behavior: 'smooth' });
-                  }}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 z-10 backdrop-blur-sm border border-slate-600/50"
+                  onClick={() => scrollContainer('cast-scroll', 'right')}
                 >
-                  →
+                  <ChevronRight size={20} />
                 </button>
               </>
             )}
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Awards Section */}
-      <div className="mt-8">
-        <h2 className="text-2xl font-semibold mb-4 text-white flex items-center gap-2">
-          <Award className="text-yellow-400" size={24} />
-          Awards & Recognition
-        </h2>
-        <div className="bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm border border-gray-700">
+        {/* Awards Section */}
+        <section className="bg-gradient-to-br from-slate-900/50 to-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8">
+          <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
+            <Award className="text-amber-400" size={28} />
+            Awards & Recognition
+          </h2>
           {awardsLoading ? (
-            <div className="text-center text-gray-400 py-4">Loading awards...</div>
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin"></div>
+              <span className="ml-3 text-slate-400">Loading awards...</span>
+            </div>
           ) : awards.length > 0 ? (
-            <ul className="space-y-2 text-white">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {awards.map((award, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <span className="text-yellow-400 mt-1">•</span>
-                  <span>{award.award}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-400 text-center py-4">No award information available for this movie</p>
-          )}
-        </div>
-      </div>
-
-      {/* Reviews Section */}
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold text-white">Reviews</h2>
-          {user && (
-            <button 
-              onClick={handleOpenRatingModal}
-              disabled={hasUserReviewed}
-              className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                hasUserReviewed
-                  ? 'bg-green-600 text-gray-300 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-            >
-              {hasUserReviewed ? 'Already Reviewed' : 'Add Your Review'}
-            </button>
-          )}
-        </div>
-
-        <div className="bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm border border-gray-700">
-          {reviewsLoading ? (
-            <div className="text-center text-gray-400 py-8">Loading reviews...</div>
-          ) : reviews.length > 0 ? (
-            <>
-              {reviews.slice(0, 3).map(review => (
-                <div key={review.review_id} className="mb-4">
-                  <ReviewCard
-                    review={review}
-                    user={user}
-                    onReviewUpdate={handleReviewUpdate}
-                    onReviewDelete={handleReviewDelete}
-                  />
+                <div key={index} className="flex items-center gap-4 p-4 bg-slate-800/30 rounded-xl border border-slate-600/30 hover:border-amber-400/30 transition-colors">
+                  <div className="w-3 h-3 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full flex-shrink-0"></div>
+                  <span className="text-slate-200">{award.award}</span>
                 </div>
               ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-400">
+              <Award className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No award information available for this movie</p>
+            </div>
+          )}
+        </section>
+
+        {/* Reviews Section */}
+        <section className="bg-gradient-to-br from-slate-900/50 to-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+              <Star className="text-amber-400" size={28} />
+              Reviews
+            </h2>
+            {user && (
+              <button
+                onClick={handleOpenRatingModal}
+                disabled={hasUserReviewed}
+                className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 ${hasUserReviewed
+                    ? 'bg-emerald-500/20 text-emerald-300 cursor-not-allowed border border-emerald-500/30'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
+                  }`}
+              >
+                <Star size={16} />
+                {hasUserReviewed ? 'Already Reviewed' : 'Add Your Review'}
+              </button>
+            )}
+          </div>
+
+          {reviewsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin"></div>
+              <span className="ml-3 text-slate-400">Loading reviews...</span>
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="space-y-6">
+              {reviews.slice(0, 3).map(review => (
+                <ReviewCard
+                  key={review.review_id}
+                  review={review}
+                  user={user}
+                  onReviewUpdate={handleReviewUpdate}
+                  onReviewDelete={handleReviewDelete}
+                />
+              ))}
               {reviews.length > 3 && (
-                <div className="text-center mt-4 pt-4 border-t border-gray-600">
-                  <a 
+                <div className="text-center pt-6 border-t border-slate-600/50">
+                  <a
                     href={`/reviews/${movie.movie_id}`}
-                    className="text-blue-400 hover:text-blue-300 underline transition-colors"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-blue-300 hover:text-blue-200 rounded-xl transition-all duration-200 border border-slate-600/50 hover:border-blue-500/30"
                   >
-                    See all reviews...
+                    <Eye size={16} />
+                    See all {reviews.length} reviews
                   </a>
                 </div>
               )}
-            </>
+            </div>
           ) : (
-            <div className="text-center text-gray-400 py-8">
-              No reviews yet. {user ? 'Be the first to review this movie!' : 'Sign in to write the first review!'}
+            <div className="text-center py-12">
+              <Star className="w-12 h-12 text-slate-400 mx-auto mb-4 opacity-50" />
+              <p className="text-slate-400 text-lg mb-4">
+                No reviews yet. {user ? 'Be the first to review this movie!' : 'Sign in to write the first review!'}
+              </p>
+              {user && !hasUserReviewed && (
+                <button
+                  onClick={handleOpenRatingModal}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                >
+                  Write the first review
+                </button>
+              )}
             </div>
           )}
-        </div>
+        </section>
       </div>
+
+      {/* Enhanced Rating Modal */}
+      {showRatingModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-white">Rate "{movie.title}"</h3>
+              <button
+                onClick={handleCloseRatingModal}
+                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-700/50"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-white font-medium mb-3">Your Rating</label>
+                <div className="flex justify-center">
+                  <StarRating
+                    rating={userRating}
+                    onRatingChange={setUserRating}
+                    interactive={true}
+                    size="lg"
+                  />
+                </div>
+                <p className="text-sm text-slate-400 mt-3 text-center">Click on a star to rate (1-10)</p>
+                {userRating > 0 && (
+                  <p className="text-center mt-2">
+                    <span className="text-2xl font-bold text-amber-400">{userRating}</span>
+                    <span className="text-slate-400 ml-1">/10</span>
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-white font-medium mb-3">Write a Review (Optional)</label>
+                <textarea
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  placeholder="Share your thoughts about this movie..."
+                  className="w-full p-4 bg-slate-800/50 backdrop-blur-sm text-white rounded-xl border border-slate-600/50 focus:border-blue-400/50 focus:outline-none focus:ring-2 focus:ring-blue-400/20 resize-none transition-all duration-200"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={handleCloseRatingModal}
+                  className="flex-1 px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-white rounded-xl transition-all duration-200 font-medium border border-slate-600/30"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitRating}
+                  disabled={isSubmittingRating || userRating === 0}
+                  className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${isSubmittingRating || userRating === 0
+                      ? 'bg-slate-600/50 text-slate-400 cursor-not-allowed border border-slate-600/30'
+                      : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
+                    }`}
+                >
+                  {isSubmittingRating ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Submitting...
+                    </div>
+                  ) : (
+                    'Submit Rating'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
