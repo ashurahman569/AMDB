@@ -1,6 +1,60 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Star, MoreHorizontal, Edit2, Trash2, UserX, X, AlertTriangle, CheckCircle } from 'lucide-react';
 
+// Separate component for interactive star rating
+const InteractiveStarRating = ({ rating, onRatingChange }) => {
+  const [hoverRating, setHoverRating] = useState(0);
+  const starRating = Math.min(Math.max(rating, 0), 10);
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
+        const isActive = star <= (hoverRating || starRating);
+        return (
+          <button
+            key={star}
+            type="button"
+            className="transition-all duration-200 hover:scale-110 cursor-pointer text-amber-400"
+            onClick={() => onRatingChange && onRatingChange(star)}
+            onMouseEnter={() => setHoverRating(star)}
+            onMouseLeave={() => setHoverRating(0)}
+          >
+            <Star 
+              size={18} 
+              fill={isActive ? 'currentColor' : 'none'}
+              className="drop-shadow-sm"
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+// Static star display component
+const StaticStarRating = ({ rating }) => {
+  const starRating = Math.min(Math.max(rating, 0), 10);
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
+        const isActive = star <= starRating;
+        return (
+          <Star 
+            key={star}
+            size={14} 
+            fill={isActive ? 'currentColor' : 'none'}
+            className={`drop-shadow-sm ${isActive ? 'text-amber-400' : 'text-slate-600'}`}
+          />
+        );
+      })}
+      <span className="ml-2 text-xs font-medium text-slate-400">
+        {starRating}/10
+      </span>
+    </div>
+  );
+};
+
 const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -90,46 +144,6 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
       day: 'numeric',
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     });
-  };
-
-  // Generate star rating display with animation
-  const renderStars = (rating, interactive = false, onRatingChange = null) => {
-    const [hoverRating, setHoverRating] = useState(0);
-    const starRating = Math.min(Math.max(rating, 0), 10);
-
-    return (
-      <div className="flex items-center gap-0.5">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
-          const isActive = star <= (interactive ? (hoverRating || starRating) : starRating);
-          return (
-            <button
-              key={star}
-              type="button"
-              disabled={!interactive}
-              className={`transition-all duration-200 ${
-                interactive 
-                  ? 'hover:scale-110 cursor-pointer' 
-                  : 'cursor-default'
-              } ${isActive ? 'text-amber-400' : 'text-slate-600'}`}
-              onClick={() => interactive && onRatingChange && onRatingChange(star)}
-              onMouseEnter={() => interactive && setHoverRating(star)}
-              onMouseLeave={() => interactive && setHoverRating(0)}
-            >
-              <Star 
-                size={interactive ? 18 : 14} 
-                fill={isActive ? 'currentColor' : 'none'}
-                className="drop-shadow-sm"
-              />
-            </button>
-          );
-        })}
-        {!interactive && (
-          <span className="ml-2 text-xs font-medium text-slate-400">
-            {starRating}/10
-          </span>
-        )}
-      </div>
-    );
   };
 
   // Get user initials for avatar with better color generation
@@ -377,7 +391,7 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
 
             {/* Stars and Date with enhanced styling */}
             <div className="flex items-center gap-4 mb-4">
-              {review.rating && renderStars(review.rating)}
+              {review.rating && <StaticStarRating rating={review.rating} />}
               <span className="text-sm text-slate-400 font-medium">
                 {formatDate(review.created_at)}
               </span>
@@ -412,7 +426,7 @@ const ReviewCard = ({ review, user, onReviewUpdate, onReviewDelete }) => {
             <div className="space-y-6">
               <div>
                 <label className="block text-white font-medium mb-3">Your Rating</label>
-                {renderStars(editRating, true, setEditRating)}
+                <InteractiveStarRating rating={editRating} onRatingChange={setEditRating} />
                 <p className="text-sm text-slate-400 mt-2">Click on a star to rate (1-10)</p>
               </div>
 
