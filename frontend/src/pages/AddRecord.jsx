@@ -855,12 +855,12 @@ const AddRecord = ({ user }) => {
                                         results={personResults}
                                         onSelect={setSelectedPerson}
                                         selected={selectedPerson}
-                                        renderResult = {(person) => (
-    <div className="flex justify-between items-center">
-        <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
-        <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
-    </div>
-)}
+                                        renderResult={(person) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
+                                            </div>
+                                        )}
 
                                         placeholder="Search for a person..."
                                     />
@@ -905,12 +905,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult = {(movie) => (
-    <div className="flex justify-between items-center">
-        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
-        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
-    </div>
-)}
+                                        renderResult={(movie) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -921,12 +921,12 @@ const AddRecord = ({ user }) => {
                                         results={personResults}
                                         onSelect={setSelectedPerson}
                                         selected={selectedPerson}
-                                        renderResult = {(person) => (
-    <div className="flex justify-between items-center">
-        <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
-        <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
-    </div>
-)}
+                                        renderResult={(person) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
+                                            </div>
+                                        )}
 
                                         placeholder="Search for a person..."
                                     />
@@ -960,12 +960,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult = {(movie) => (
-    <div className="flex justify-between items-center">
-        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
-        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
-    </div>
-)}
+                                        renderResult={(movie) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -976,12 +976,12 @@ const AddRecord = ({ user }) => {
                                         results={personResults}
                                         onSelect={setSelectedPerson}
                                         selected={selectedPerson}
-                                        renderResult = {(person) => (
-    <div className="flex justify-between items-center">
-        <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
-        <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
-    </div>
-)}
+                                        renderResult={(person) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
+                                            </div>
+                                        )}
 
                                         placeholder="Search for a person..."
                                     />
@@ -1015,12 +1015,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult = {(movie) => (
-    <div className="flex justify-between items-center">
-        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
-        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
-    </div>
-)}
+                                        renderResult={(movie) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -1031,12 +1031,12 @@ const AddRecord = ({ user }) => {
                                         results={genreResults}
                                         onSelect={setSelectedGenre}
                                         selected={selectedGenre}
-                                        renderResult = {(genre) => (
-    <div className="flex justify-between items-center">
-        <span>{genre.name}</span>
-        <span className="text-xs text-gray-400 ml-2">Genre ID: {genre.genre_id}</span>
-    </div>
-)}
+                                        renderResult={(genre) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{genre.name}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Genre ID: {genre.genre_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for a genre..."
                                     />
 
@@ -1069,12 +1069,12 @@ const AddRecord = ({ user }) => {
                                         results={awardResults}
                                         onSelect={setSelectedAward}
                                         selected={selectedAward}
-                                        renderResult = {(award) => (
-    <div className="flex justify-between items-center">
-        <span>{award.name} {award.year ? `(${award.year})` : ''}</span>
-        <span className="text-xs text-gray-400 ml-2">Award ID: {award.award_id}</span>
-    </div>
-)}
+                                        renderResult={(award) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{award.name} {award.year ? `(${award.year})` : ''}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Award ID: {award.award_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for an award..."
                                     />
 
@@ -1085,12 +1085,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult = {(movie) => (
-    <div className="flex justify-between items-center">
-        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
-        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
-    </div>
-)}
+                                        renderResult={(movie) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -1134,12 +1134,12 @@ const AddRecord = ({ user }) => {
                                         results={awardResults}
                                         onSelect={setSelectedAward}
                                         selected={selectedAward}
-                                        renderResult = {(award) => (
-    <div className="flex justify-between items-center">
-        <span>{award.name} {award.year ? `(${award.year})` : ''}</span>
-        <span className="text-xs text-gray-400 ml-2">Award ID: {award.award_id}</span>
-    </div>
-)}
+                                        renderResult={(award) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{award.name} {award.year ? `(${award.year})` : ''}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Award ID: {award.award_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for an award..."
                                     />
 
@@ -1150,12 +1150,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult = {(movie) => (
-    <div className="flex justify-between items-center">
-        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
-        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
-    </div>
-)}
+                                        renderResult={(movie) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -1166,12 +1166,12 @@ const AddRecord = ({ user }) => {
                                         results={personResults}
                                         onSelect={setSelectedPerson}
                                         selected={selectedPerson}
-                                        renderResult = {(person) => (
-    <div className="flex justify-between items-center">
-        <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
-        <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
-    </div>
-)}
+                                        renderResult={(person) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
+                                            </div>
+                                        )}
 
                                         placeholder="Search for a person..."
                                     />
@@ -1216,12 +1216,12 @@ const AddRecord = ({ user }) => {
                                         results={awardResults}
                                         onSelect={setSelectedAward}
                                         selected={selectedAward}
-                                        renderResult = {(award) => (
-    <div className="flex justify-between items-center">
-        <span>{award.name} {award.year ? `(${award.year})` : ''}</span>
-        <span className="text-xs text-gray-400 ml-2">Award ID: {award.award_id}</span>
-    </div>
-)}
+                                        renderResult={(award) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{award.name} {award.year ? `(${award.year})` : ''}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Award ID: {award.award_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for an award..."
                                     />
 
@@ -1232,12 +1232,12 @@ const AddRecord = ({ user }) => {
                                         results={movieResults}
                                         onSelect={setSelectedMovie}
                                         selected={selectedMovie}
-                                        renderResult = {(movie) => (
-    <div className="flex justify-between items-center">
-        <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
-        <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
-    </div>
-)}
+                                        renderResult={(movie) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{movie.title} {movie.release_date ? `(${new Date(movie.release_date).getFullYear()})` : ''}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Movie ID: {movie.movie_id}</span>
+                                            </div>
+                                        )}
                                         placeholder="Search for a movie..."
                                     />
 
@@ -1248,12 +1248,12 @@ const AddRecord = ({ user }) => {
                                         results={personResults}
                                         onSelect={setSelectedPerson}
                                         selected={selectedPerson}
-                                        renderResult = {(person) => (
-    <div className="flex justify-between items-center">
-        <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
-        <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
-    </div>
-)}
+                                        renderResult={(person) => (
+                                            <div className="flex justify-between items-center">
+                                                <span>{`${person.first_name || ''} ${person.last_name || ''}`.trim()}</span>
+                                                <span className="text-xs text-gray-400 ml-2">Person ID: {person.person_id}</span>
+                                            </div>
+                                        )}
 
                                         placeholder="Search for a person..."
                                     />

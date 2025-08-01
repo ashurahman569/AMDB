@@ -57,11 +57,6 @@ const PersonCard = ({ person, onClick }) => {
               </div>  
             </div>  
           )}  
-            
-          {/* Floating Action Indicator */}  
-          <div className="absolute top-4 right-4 w-8 h-8 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0 border border-white/20">  
-            <Star size={14} className="text-white" />  
-          </div>  
         </div>  
           
         {/* Name Section */}  
