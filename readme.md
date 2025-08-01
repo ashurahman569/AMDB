@@ -7,7 +7,7 @@
 <h1 align="center">🎬 AMDB: The Ultimate Movie Database 🎬</h1>
 
 <p align="center">
-  <b>Discover. Browse. Explore.<br />Your gateway to over 700+ movies, 6000+ celebs, and 300+ awards.</b>
+  <b>Discover. Browse. Explore.<br />Your gateway to over 1400+ movies, 23000+ celebs, and 300+ awards.</b>
 </p>
 
 ---
@@ -21,7 +21,7 @@
 ## 🏆 Features
 
 - 🔍 **Browse & Search:** Instantly find movies, celebs, and awards
-- 📊 **Rich Data:** 700+ movies, 6000+ persons, 300+ awards
+- 📊 **Rich Data:** 1400+ movies, 23000+ persons, 300+ awards
 - 🎨 **Modern UI:** Built with Vite + React + Tailwind CSS for fast & responsive experience
 - 💾 **RESTful API:** High-performance backend with Express & PostgreSQL
 - ⭐ **Favorites:** Save your favorite movies and celebrities (coming soon!)
