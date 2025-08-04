@@ -139,7 +139,7 @@ router.delete('/:reviewId', authorize, getUserInfo, async (req, res) => {
 
         // Check if user owns the review or is a moderator/admin
         const isOwner = checkReview.rows[0].user_id === userId;
-        const isModerator = userType === 'admin' || userType === 'moderator';
+        const isModerator = userType === 'admin' || userType === 'moderator' || userType === 'headadmin';
 
         if (!isOwner && !isModerator) {
             return res.status(403).json({ error: 'Unauthorized to delete this review' });
